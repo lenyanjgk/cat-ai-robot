@@ -1,0 +1,13 @@
+**/target
+.idea
+*.iml
+*.class
+*Test.java
+**/test
+**/logs
+.DS_Store
+**/node_modules
+dist/
+.vscode/
+lucene-index/
+npm-debug.log
