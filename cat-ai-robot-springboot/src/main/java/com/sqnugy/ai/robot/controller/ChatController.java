@@ -80,12 +80,6 @@ public class ChatController {
     private AudioChatService audioChatService;
 
     @Resource
-    private OkHttpClient okHttpClient;
-
-    @Resource
-    private MinioUtil minioUtil;
-
-    @Resource
     private ChatMapper chatMapper;
     @Autowired
     private RoleMapper roleMapper;
@@ -181,10 +175,12 @@ public class ChatController {
 
         // 3️⃣ 构建上下文
         List<Message> messageList = Lists.newArrayList();
+        RoleDO roleDO = roleMapper.selectById(chatDO.getRoleId());
+
 
         // 3.1 systemPrompt
-        if (chatDO.getSystemPrompt() != null) {
-            messageList.add(new SystemMessage(chatDO.getSystemPrompt()));
+        if (roleDO.getSystemPrompt() != null) {
+            messageList.add(new SystemMessage(roleDO.getSystemPrompt()));
         }
 
         // 3.2 最近历史消息
@@ -254,7 +250,6 @@ public class ChatController {
             return false;
         });
 
-        RoleDO roleDO = roleMapper.selectById(chatDO.getRoleId());
         // 5️⃣ 文本转语音
         String replyAudioUrl = audioChatService.synthesize(cleanedReplyText, roleDO);
 

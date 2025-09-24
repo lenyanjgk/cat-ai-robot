@@ -67,7 +67,6 @@ public class ChatServiceImpl implements ChatService {
                 .summary(summary)
                 .uuid(uuid)
                 .roleId(roleId)
-                .systemPrompt(roleDO.getSystemPrompt()) // 存储角色系统提示
                 .createTime(LocalDateTime.now())
                 .updateTime(LocalDateTime.now())
                 .build());

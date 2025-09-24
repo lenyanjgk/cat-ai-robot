@@ -32,8 +32,6 @@ public class ChatDO {
 
     private String summary;
 
-    private String systemPrompt;
-
     private LocalDateTime createTime;
 
     private LocalDateTime updateTime;
