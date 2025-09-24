@@ -38,6 +38,10 @@ public class RoleDO {
 
     private String voiceModelName;
 
+    private Float speechRate;
+
+    private Float pitchRate;
+
     private LocalDateTime createTime;
 
     private LocalDateTime updateTime;

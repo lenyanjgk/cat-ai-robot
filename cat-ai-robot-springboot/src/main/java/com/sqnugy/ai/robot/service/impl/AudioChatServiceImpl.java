@@ -7,6 +7,7 @@ import com.alibaba.dashscope.audio.asr.transcription.TranscriptionResult;
 import com.alibaba.dashscope.audio.ttsv2.SpeechSynthesisParam;
 import com.alibaba.dashscope.audio.ttsv2.SpeechSynthesizer;
 import com.google.gson.Gson;
+import com.sqnugy.ai.robot.domain.dos.RoleDO;
 import com.sqnugy.ai.robot.model.dto.ParaformerTranscriptionRespDTO;
 import com.sqnugy.ai.robot.model.dto.TranscriptionTaskResponse;
 import com.sqnugy.ai.robot.service.AudioChatService;
@@ -155,14 +156,16 @@ public class AudioChatServiceImpl implements AudioChatService {
 //    }
 
 
-    public String synthesize(String text, String model, String voice) {
+    public String synthesize(String text, RoleDO roleDO) {
         try {
             // cosyvoice-v2 模型音色地址 https://help.aliyun.com/zh/model-studio/text-to-speech#3a8c7759a4yyx
             // 1️⃣ 构建语音合成相关参数
             SpeechSynthesisParam param = SpeechSynthesisParam.builder()
                     .apiKey(apiKey)
-                    .model(model)
-                    .voice(voice)
+                    .model(roleDO.getVoiceModelName())
+                    .voice(roleDO.getVoiceCode())
+                    .speechRate(roleDO.getSpeechRate())
+                    .pitchRate(roleDO.getPitchRate())
                     .build();
 
             // 2️⃣ 同步调用语音合成大模型，获取 ByteBuffer

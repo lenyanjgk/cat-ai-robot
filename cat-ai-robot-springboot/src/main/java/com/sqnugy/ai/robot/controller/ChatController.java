@@ -256,7 +256,7 @@ public class ChatController {
 
         RoleDO roleDO = roleMapper.selectById(chatDO.getRoleId());
         // 5️⃣ 文本转语音
-        String replyAudioUrl = audioChatService.synthesize(cleanedReplyText, roleDO.getVoiceModelName(), roleDO.getVoiceCode());
+        String replyAudioUrl = audioChatService.synthesize(cleanedReplyText, roleDO);
 
         // 6️⃣ 返回
         VoiceChatRspVO rspVO = VoiceChatRspVO.builder()

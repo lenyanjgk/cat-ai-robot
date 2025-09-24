@@ -84,9 +84,12 @@ CREATE TABLE "public"."t_role" (
                                    "system_prompt" text COLLATE "pg_catalog"."default" NOT NULL,
                                    "voice_code" varchar(100) COLLATE "pg_catalog"."default",
                                    "language" varchar(16) COLLATE "pg_catalog"."default" DEFAULT 'zh-CN'::character varying,
+                                   "voice_model_name" varchar(60) COLLATE "pg_catalog"."default",
+                                   "speech_rate" float4 DEFAULT 1.0,
+                                   "pitch_rate" float4 DEFAULT 1.0
                                    "create_time" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
                                    "update_time" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                                   "voice_model_name" varchar(60) COLLATE "pg_catalog"."default"
+
 )
 ;
 COMMENT ON COLUMN "public"."t_role"."system_prompt" IS '角色人设的系统提示';
