@@ -165,14 +165,15 @@ public class AudioChatServiceImpl implements AudioChatService {
 //        return ChatClient.create(chatModel).prompt().options(options);
 //    }
 
-    // ===== 3️⃣ 文本转语音（TTS） =====
+
     public String synthesize(String text) {
         try {
+            // cosyvoice-v2 模型音色地址 https://help.aliyun.com/zh/model-studio/text-to-speech#3a8c7759a4yyx
             // 1️⃣ 构建语音合成相关参数
             SpeechSynthesisParam param = SpeechSynthesisParam.builder()
                     .apiKey(apiKey)
                     .model("cosyvoice-v2")
-                    .voice("longanran")
+                    .voice("longanrou")
                     .build();
 
             // 2️⃣ 同步调用语音合成大模型，获取 ByteBuffer

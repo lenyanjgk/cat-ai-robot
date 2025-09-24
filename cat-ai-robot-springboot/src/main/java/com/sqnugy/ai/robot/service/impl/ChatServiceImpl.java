@@ -5,8 +5,10 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.sqnugy.ai.robot.domain.dos.ChatDO;
 import com.sqnugy.ai.robot.domain.dos.ChatMessageDO;
+import com.sqnugy.ai.robot.domain.dos.RoleDO;
 import com.sqnugy.ai.robot.domain.mapper.ChatMapper;
 import com.sqnugy.ai.robot.domain.mapper.ChatMessageMapper;
+import com.sqnugy.ai.robot.domain.mapper.RoleMapper;
 import com.sqnugy.ai.robot.enums.ResponseCodeEnum;
 import com.sqnugy.ai.robot.exception.BizException;
 import com.sqnugy.ai.robot.model.vo.chat.*;
@@ -37,8 +39,12 @@ public class ChatServiceImpl implements ChatService {
 
     @Resource
     private ChatMapper chatMapper;
+
     @Resource
     private ChatMessageMapper chatMessageMapper;
+
+    @Resource
+    private RoleMapper roleMapper;
 
     /**
      * 新建对话
@@ -48,28 +54,31 @@ public class ChatServiceImpl implements ChatService {
      */
     @Override
     public Response<NewChatRspVO> newChat(NewChatReqVO newChatReqVO) {
-        // 用户发送的消息
-        String message = newChatReqVO.getMessage();
+        // 用户选定角色
+        Long roleId = newChatReqVO.getRoleId();
 
-        // 生成对话 UUID
+        RoleDO roleDO = roleMapper.selectById(roleId);
+
         String uuid = UUID.randomUUID().toString();
-        // 截全用户发送的消息，作为对话摘要
-        String summary = StringUtil.truncate(message, 20);
+        String summary = StringUtil.truncate(newChatReqVO.getMessage(), 20);
 
-        // 存储对话记录到数据库中
+        // 新建会话时存储角色信息
         chatMapper.insert(ChatDO.builder()
                 .summary(summary)
                 .uuid(uuid)
+                .roleId(roleId)
+                .systemPrompt(roleDO.getSystemPrompt()) // 存储角色系统提示
                 .createTime(LocalDateTime.now())
                 .updateTime(LocalDateTime.now())
                 .build());
 
-        // 将摘要、UUID 返回给前端
         return Response.success(NewChatRspVO.builder()
                 .uuid(uuid)
                 .summary(summary)
+                .roleName(roleDO.getName())
                 .build());
     }
+
 
     /**
      * 查询历史消息

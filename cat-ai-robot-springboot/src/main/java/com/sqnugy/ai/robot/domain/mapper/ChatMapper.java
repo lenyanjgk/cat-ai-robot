@@ -14,6 +14,10 @@ import com.sqnugy.ai.robot.domain.dos.ChatDO;
  **/
 public interface ChatMapper extends BaseMapper<ChatDO> {
 
+    default ChatDO selectByUuid(String uuid) {
+        return selectOne(Wrappers.<ChatDO>lambdaQuery().eq(ChatDO::getUuid, uuid));
+    }
+
     /**
      * 分页查询
      * @param current

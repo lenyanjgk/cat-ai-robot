@@ -17,13 +17,18 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Builder
 public class NewChatRspVO {
-    /**
-     * 摘要
-     */
-    private String summary;
 
     /**
      * 对话 UUID
      */
     private String uuid;
+
+    private String roleName;
+
+    /**
+     * 摘要
+     */
+    private String summary;
+
+
 }

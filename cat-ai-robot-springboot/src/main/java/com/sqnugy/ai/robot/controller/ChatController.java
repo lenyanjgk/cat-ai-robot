@@ -1,21 +1,31 @@
 package com.sqnugy.ai.robot.controller;
 
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.google.common.collect.Lists;
 import com.sqnugy.ai.robot.advisor.CustomChatMemoryAdvisor;
 import com.sqnugy.ai.robot.advisor.CustomStreamLoggerAndMessage2DBAdvisor;
 import com.sqnugy.ai.robot.advisor.NetworkSearchAdvisor;
 import com.sqnugy.ai.robot.aspect.ApiOperationLog;
+import com.sqnugy.ai.robot.domain.dos.ChatDO;
+import com.sqnugy.ai.robot.domain.dos.ChatMessageDO;
+import com.sqnugy.ai.robot.domain.mapper.ChatMapper;
 import com.sqnugy.ai.robot.domain.mapper.ChatMessageMapper;
 import com.sqnugy.ai.robot.model.vo.chat.*;
+import com.sqnugy.ai.robot.service.AudioChatService;
 import com.sqnugy.ai.robot.service.ChatService;
 import com.sqnugy.ai.robot.service.SearXNGService;
 import com.sqnugy.ai.robot.service.SearchResultContentFetcherService;
+import com.sqnugy.ai.robot.utils.MinioUtil;
 import com.sqnugy.ai.robot.utils.PageResponse;
 import com.sqnugy.ai.robot.utils.Response;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import okhttp3.OkHttpClient;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.api.Advisor;
+import org.springframework.ai.chat.messages.*;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
@@ -30,31 +40,53 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Flux;
 
+import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/chat")
 @Slf4j
+@Tag(name = "对话管理")
 public class ChatController {
 
     @Resource
     private ChatService chatService;
+
     @Value("${spring.ai.openai.base-url}")
     private String baseUrl;
+
     @Value("${spring.ai.openai.api-key}")
     private String apiKey;
 
     @Resource
     private ChatMessageMapper chatMessageMapper;
+
     @Resource
     private TransactionTemplate transactionTemplate;
+
     @Resource
     private SearXNGService searXNGService;
+
     @Resource
     private SearchResultContentFetcherService searchResultContentFetcherService;
 
+    @Resource
+    private AudioChatService audioChatService;
+
+    @Resource
+    private OkHttpClient okHttpClient;
+
+    @Resource
+    private MinioUtil minioUtil;
+
+    @Resource
+    private ChatMapper chatMapper;
+
     @PostMapping("/new")
     @ApiOperationLog(description = "新建对话")
+    @Operation(description = "新建会话")
     public Response<?> newChat(@RequestBody @Validated NewChatReqVO newChatReqVO) {
         return chatService.newChat(newChatReqVO);
     }
@@ -65,6 +97,7 @@ public class ChatController {
      */
     @PostMapping(value = "/completion", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @ApiOperationLog(description = "流式对话")
+    @Operation(description = "流式对话")
     public Flux<AIResponse> chat(@RequestBody @Validated AiChatReqVO aiChatReqVO) {
         // 用户消息
         String userMessage = aiChatReqVO.getMessage();
@@ -115,6 +148,89 @@ public class ChatController {
                 .content()
                 .mapNotNull(text -> AIResponse.builder().v(text).build()); // 构建返参 AIResponse
 
+    }
+
+    @PostMapping("/voice-chat")
+    @ApiOperationLog(description = "语音对话")
+    @Operation(description = "语音对话")
+    public Response<?> voiceChat(@RequestBody @Validated AudioChatReqVO audioChatReqVO) {
+
+        String chatId = audioChatReqVO.getChatId();
+
+        // 1️⃣ 获取会话信息
+        ChatDO chatDO = chatMapper.selectByUuid(chatId);
+        if (Objects.isNull(chatDO)) {
+            return Response.fail("会话不存在");
+        }
+
+        // 音频文件地址
+        String audioFileUrl = audioChatReqVO.getAudioFileUrl();
+        // 模型名称
+        String modelName = audioChatReqVO.getModelName();
+        // 温度值
+        Double temperature = audioChatReqVO.getTemperature();
+
+        // 2️⃣ 用户语音转文本
+        String userMessage = audioChatService.recognize(audioFileUrl);
+
+        // 3️⃣ 构建上下文
+        List<Message> messageList = Lists.newArrayList();
+
+        // 3.1 systemPrompt
+        if (chatDO.getSystemPrompt() != null) {
+            messageList.add(new SystemMessage(chatDO.getSystemPrompt()));
+        }
+
+        // 3.2 最近历史消息
+        List<ChatMessageDO> messages = chatMessageMapper.selectList(
+                Wrappers.<ChatMessageDO>lambdaQuery()
+                        .eq(ChatMessageDO::getChatUuid, chatId)
+                        .orderByDesc(ChatMessageDO::getCreateTime)
+                        .last("LIMIT 50")
+        );
+
+        messages.stream()
+                .sorted(Comparator.comparing(ChatMessageDO::getCreateTime)) // 升序
+                .forEach(msg -> {
+                    if (Objects.equals(msg.getRole(), MessageType.USER.getValue())) {
+                        messageList.add(new UserMessage(msg.getContent()));
+                    } else if (Objects.equals(msg.getRole(), MessageType.ASSISTANT.getValue())) {
+                        messageList.add(new AssistantMessage(msg.getContent()));
+                    }
+                });
+
+        // 3.3 当前用户 ASR 消息
+        messageList.add(new UserMessage(userMessage));
+
+        // 4️⃣ 调用 AI 模型
+        ChatModel chatModel = OpenAiChatModel.builder()
+                .openAiApi(OpenAiApi.builder()
+                        .baseUrl(baseUrl)
+                        .apiKey(apiKey)
+                        .build())
+                .build();
+
+        ChatClient.ChatClientRequestSpec chatClientRequestSpec = ChatClient.create(chatModel)
+                .prompt()
+                .options(OpenAiChatOptions.builder()
+                        .model(modelName)
+                        .temperature(temperature)
+                        .build())
+                .messages(messageList); // 直接传上下文
+
+        String reply = chatClientRequestSpec.call().content();
+        String cleanedReplyText = reply.replaceAll("\\（.*?\\）|\\(.*?\\)", "");
+
+        // 5️⃣ 文本转语音
+        String replyAudioUrl = audioChatService.synthesize(cleanedReplyText);
+
+        // 6️⃣ 返回
+        VoiceChatRspVO rspVO = VoiceChatRspVO.builder()
+                .replyText(reply)
+                .replyAudioUrl(replyAudioUrl)
+                .build();
+
+        return Response.success(rspVO);
     }
 
     @PostMapping("/list")

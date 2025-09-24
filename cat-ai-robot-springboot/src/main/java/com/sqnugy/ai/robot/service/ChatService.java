@@ -4,6 +4,8 @@ package com.sqnugy.ai.robot.service;
 import com.sqnugy.ai.robot.model.vo.chat.*;
 import com.sqnugy.ai.robot.utils.PageResponse;
 import com.sqnugy.ai.robot.utils.Response;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.RequestBody;
 
 /**
  * @author: sqnugy
@@ -19,6 +21,7 @@ public interface ChatService {
      * @return
      */
     Response<NewChatRspVO> newChat(NewChatReqVO newChatReqVO);
+
 
     /**
      * 查询历史消息

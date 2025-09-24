@@ -14,23 +14,21 @@ import java.time.LocalDateTime;
  * @Author: sqnugy
  * @Date: 2025/8/11 11:32
  * @Version: v1.0.0
- * @Description: 对话 DO 实体类
+ * @Description: 角色 DO 实体类
  **/
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("t_chat")
-public class ChatDO {
+@TableName("t_role")
+public class RoleDO {
 
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    private Long roleId;
+    private String name;
 
-    private String uuid;
-
-    private String summary;
+    private String introduction;
 
     private String systemPrompt;
 
