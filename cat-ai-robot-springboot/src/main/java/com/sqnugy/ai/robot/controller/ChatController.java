@@ -8,8 +8,10 @@ import com.sqnugy.ai.robot.advisor.NetworkSearchAdvisor;
 import com.sqnugy.ai.robot.aspect.ApiOperationLog;
 import com.sqnugy.ai.robot.domain.dos.ChatDO;
 import com.sqnugy.ai.robot.domain.dos.ChatMessageDO;
+import com.sqnugy.ai.robot.domain.dos.RoleDO;
 import com.sqnugy.ai.robot.domain.mapper.ChatMapper;
 import com.sqnugy.ai.robot.domain.mapper.ChatMessageMapper;
+import com.sqnugy.ai.robot.domain.mapper.RoleMapper;
 import com.sqnugy.ai.robot.model.vo.chat.*;
 import com.sqnugy.ai.robot.service.AudioChatService;
 import com.sqnugy.ai.robot.service.ChatService;
@@ -30,6 +32,7 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.openai.api.OpenAiApi;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -40,10 +43,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Flux;
 
+import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
+
 
 @RestController
 @RequestMapping("/chat")
@@ -83,6 +87,8 @@ public class ChatController {
 
     @Resource
     private ChatMapper chatMapper;
+    @Autowired
+    private RoleMapper roleMapper;
 
     @PostMapping("/new")
     @ApiOperationLog(description = "新建对话")
@@ -221,8 +227,36 @@ public class ChatController {
         String reply = chatClientRequestSpec.call().content();
         String cleanedReplyText = reply.replaceAll("\\（.*?\\）|\\(.*?\\)", "");
 
+        // 4.1 持久化用户 ASR 文本与 AI 回复（同一事务）
+        transactionTemplate.execute(status -> {
+            try {
+                // 用户 ASR 文本
+                chatMessageMapper.insert(ChatMessageDO.builder()
+                        .chatUuid(chatId)
+                        .content(userMessage)
+                        .role(MessageType.USER.getValue())
+                        .createTime(LocalDateTime.now())
+                        .build());
+
+                // AI 回复
+                chatMessageMapper.insert(ChatMessageDO.builder()
+                        .chatUuid(chatId)
+                        .content(reply)
+                        .role(MessageType.ASSISTANT.getValue())
+                        .createTime(LocalDateTime.now())
+                        .build());
+
+                return true;
+            } catch (Exception ex) {
+                status.setRollbackOnly();
+                log.error("保存语音对话消息失败", ex);
+            }
+            return false;
+        });
+
+        RoleDO roleDO = roleMapper.selectById(chatDO.getRoleId());
         // 5️⃣ 文本转语音
-        String replyAudioUrl = audioChatService.synthesize(cleanedReplyText);
+        String replyAudioUrl = audioChatService.synthesize(cleanedReplyText, roleDO.getVoiceModelName(), roleDO.getVoiceCode());
 
         // 6️⃣ 返回
         VoiceChatRspVO rspVO = VoiceChatRspVO.builder()

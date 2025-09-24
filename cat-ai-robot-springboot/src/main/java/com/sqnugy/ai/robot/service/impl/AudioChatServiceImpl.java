@@ -17,26 +17,15 @@ import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
-import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.model.ChatModel;
-import org.springframework.ai.openai.OpenAiChatModel;
-import org.springframework.ai.openai.OpenAiChatOptions;
-import org.springframework.ai.openai.api.OpenAiApi;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.buffer.DataBufferUtils;
-import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Base64;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
- * @author 吴光耀
+ * @author 吴光耀，江国凯
  * @Date 2025/9/23
  * @description:
  */
@@ -166,14 +155,14 @@ public class AudioChatServiceImpl implements AudioChatService {
 //    }
 
 
-    public String synthesize(String text) {
+    public String synthesize(String text, String model, String voice) {
         try {
             // cosyvoice-v2 模型音色地址 https://help.aliyun.com/zh/model-studio/text-to-speech#3a8c7759a4yyx
             // 1️⃣ 构建语音合成相关参数
             SpeechSynthesisParam param = SpeechSynthesisParam.builder()
                     .apiKey(apiKey)
-                    .model("cosyvoice-v2")
-                    .voice("longanrou")
+                    .model(model)
+                    .voice(voice)
                     .build();
 
             // 2️⃣ 同步调用语音合成大模型，获取 ByteBuffer

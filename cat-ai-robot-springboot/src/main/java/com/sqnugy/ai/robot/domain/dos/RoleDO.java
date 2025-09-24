@@ -11,8 +11,8 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 /**
- * @Author: sqnugy
- * @Date: 2025/8/11 11:32
+ * @Author: sqnugy,江国凯
+ * @Date: 2025/9/24 11:32
  * @Version: v1.0.0
  * @Description: 角色 DO 实体类
  **/
@@ -31,6 +31,12 @@ public class RoleDO {
     private String introduction;
 
     private String systemPrompt;
+
+    private String voiceCode;
+
+    private String language;
+
+    private String voiceModelName;
 
     private LocalDateTime createTime;
 
