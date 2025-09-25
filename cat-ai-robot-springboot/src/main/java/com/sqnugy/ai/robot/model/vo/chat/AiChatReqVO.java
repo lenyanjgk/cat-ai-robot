@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 
 
 /**
- * @author: sqnugy
+ * @author: sqnugy,江国凯
  * @url: www.sqnugy.top
  * @date: 2023-09-15 14:07
  * @description: AI 聊天
@@ -39,4 +39,9 @@ public class AiChatReqVO {
      * 温度值，默认为 0.7
      */
     private Double temperature = 0.7;
+
+    /**
+     * 角色ID
+     */
+    private Long roleId;
 }

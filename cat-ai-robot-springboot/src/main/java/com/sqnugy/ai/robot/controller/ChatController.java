@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.google.common.collect.Lists;
 import com.sqnugy.ai.robot.advisor.CustomChatMemoryAdvisor;
 import com.sqnugy.ai.robot.advisor.CustomStreamLoggerAndMessage2DBAdvisor;
-import com.sqnugy.ai.robot.advisor.NetworkSearchAdvisor;
 import com.sqnugy.ai.robot.aspect.ApiOperationLog;
 import com.sqnugy.ai.robot.domain.dos.ChatDO;
 import com.sqnugy.ai.robot.domain.dos.ChatMessageDO;
@@ -15,16 +14,12 @@ import com.sqnugy.ai.robot.domain.mapper.RoleMapper;
 import com.sqnugy.ai.robot.model.vo.chat.*;
 import com.sqnugy.ai.robot.service.AudioChatService;
 import com.sqnugy.ai.robot.service.ChatService;
-import com.sqnugy.ai.robot.service.SearXNGService;
-import com.sqnugy.ai.robot.service.SearchResultContentFetcherService;
-import com.sqnugy.ai.robot.utils.MinioUtil;
 import com.sqnugy.ai.robot.utils.PageResponse;
 import com.sqnugy.ai.robot.utils.Response;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
-import okhttp3.OkHttpClient;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.api.Advisor;
 import org.springframework.ai.chat.messages.*;
@@ -32,15 +27,11 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.openai.api.OpenAiApi;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 
 import java.time.LocalDateTime;
@@ -88,6 +79,7 @@ public class ChatController {
 
     /**
      * 流式对话
+     *
      * @return
      */
     @PostMapping(value = "/completion", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -104,21 +96,10 @@ public class ChatController {
         Double temperature = aiChatReqVO.getTemperature();
 
         // 构建 ChatModel
-        ChatModel chatModel = OpenAiChatModel.builder()
-                .openAiApi(OpenAiApi.builder()
-                        .baseUrl(baseUrl)
-                        .apiKey(apiKey)
-                        .build())
-                .build();
+        ChatModel chatModel = OpenAiChatModel.builder().openAiApi(OpenAiApi.builder().baseUrl(baseUrl).apiKey(apiKey).build()).build();
 
         // 动态设置调用的模型名称、温度值
-        ChatClient.ChatClientRequestSpec chatClientRequestSpec = ChatClient.create(chatModel)
-                .prompt()
-                .options(OpenAiChatOptions.builder()
-                        .model(modelName)
-                        .temperature(temperature)
-                        .build())
-                .user(userMessage); // 用户提示词
+        ChatClient.ChatClientRequestSpec chatClientRequestSpec = ChatClient.create(chatModel).prompt().options(OpenAiChatOptions.builder().model(modelName).temperature(temperature).build()).user(userMessage); // 用户提示词
 
         // Advisor 集合
         List<Advisor> advisors = Lists.newArrayList();
@@ -141,10 +122,7 @@ public class ChatController {
         chatClientRequestSpec.advisors(advisors);
 
         // 流式输出
-        return chatClientRequestSpec
-                .stream()
-                .content()
-                .mapNotNull(text -> AIResponse.builder().v(text).build()); // 构建返参 AIResponse
+        return chatClientRequestSpec.stream().content().mapNotNull(text -> AIResponse.builder().v(text).build()); // 构建返参 AIResponse
 
     }
 
@@ -182,15 +160,9 @@ public class ChatController {
         }
 
         // 3.2 最近历史消息
-        List<ChatMessageDO> messages = chatMessageMapper.selectList(
-                Wrappers.<ChatMessageDO>lambdaQuery()
-                        .eq(ChatMessageDO::getChatUuid, chatId)
-                        .orderByDesc(ChatMessageDO::getCreateTime)
-                        .last("LIMIT 50")
-        );
+        List<ChatMessageDO> messages = chatMessageMapper.selectList(Wrappers.<ChatMessageDO>lambdaQuery().eq(ChatMessageDO::getChatUuid, chatId).orderByDesc(ChatMessageDO::getCreateTime).last("LIMIT 50"));
 
-        messages.stream()
-                .sorted(Comparator.comparing(ChatMessageDO::getCreateTime)) // 升序
+        messages.stream().sorted(Comparator.comparing(ChatMessageDO::getCreateTime)) // 升序
                 .forEach(msg -> {
                     if (Objects.equals(msg.getRole(), MessageType.USER.getValue())) {
                         messageList.add(new UserMessage(msg.getContent()));
@@ -203,20 +175,9 @@ public class ChatController {
         messageList.add(new UserMessage(userMessage));
 
         // 4️⃣ 调用 AI 模型
-        ChatModel chatModel = OpenAiChatModel.builder()
-                .openAiApi(OpenAiApi.builder()
-                        .baseUrl(baseUrl)
-                        .apiKey(apiKey)
-                        .build())
-                .build();
+        ChatModel chatModel = OpenAiChatModel.builder().openAiApi(OpenAiApi.builder().baseUrl(baseUrl).apiKey(apiKey).build()).build();
 
-        ChatClient.ChatClientRequestSpec chatClientRequestSpec = ChatClient.create(chatModel)
-                .prompt()
-                .options(OpenAiChatOptions.builder()
-                        .model(modelName)
-                        .temperature(temperature)
-                        .build())
-                .messages(messageList); // 直接传上下文
+        ChatClient.ChatClientRequestSpec chatClientRequestSpec = ChatClient.create(chatModel).prompt().options(OpenAiChatOptions.builder().model(modelName).temperature(temperature).build()).messages(messageList); // 直接传上下文
 
         String reply = chatClientRequestSpec.call().content();
         String cleanedReplyText = reply.replaceAll("\\（.*?\\）|\\(.*?\\)", "");
@@ -225,20 +186,10 @@ public class ChatController {
         transactionTemplate.execute(status -> {
             try {
                 // 用户 ASR 文本
-                chatMessageMapper.insert(ChatMessageDO.builder()
-                        .chatUuid(chatId)
-                        .content(userMessage)
-                        .role(MessageType.USER.getValue())
-                        .createTime(LocalDateTime.now())
-                        .build());
+                chatMessageMapper.insert(ChatMessageDO.builder().chatUuid(chatId).content(userMessage).role(MessageType.USER.getValue()).createTime(LocalDateTime.now()).build());
 
                 // AI 回复
-                chatMessageMapper.insert(ChatMessageDO.builder()
-                        .chatUuid(chatId)
-                        .content(reply)
-                        .role(MessageType.ASSISTANT.getValue())
-                        .createTime(LocalDateTime.now())
-                        .build());
+                chatMessageMapper.insert(ChatMessageDO.builder().chatUuid(chatId).content(reply).role(MessageType.ASSISTANT.getValue()).createTime(LocalDateTime.now()).build());
 
                 return true;
             } catch (Exception ex) {
@@ -252,10 +203,7 @@ public class ChatController {
         String replyAudioUrl = audioChatService.synthesize(cleanedReplyText, roleDO);
 
         // 6️⃣ 返回
-        VoiceChatRspVO rspVO = VoiceChatRspVO.builder()
-                .replyText(reply)
-                .replyAudioUrl(replyAudioUrl)
-                .build();
+        VoiceChatRspVO rspVO = VoiceChatRspVO.builder().replyText(reply).replyAudioUrl(replyAudioUrl).build();
 
         return Response.success(rspVO);
     }
@@ -286,6 +234,30 @@ public class ChatController {
     @Operation(summary = "删除对话")
     public Response<?> deleteChat(@RequestBody @Validated DeleteChatReqVO deleteChatReqVO) {
         return chatService.deleteChat(deleteChatReqVO);
+    }
+
+    @PostMapping("/role/info")
+    @ApiOperationLog(description = "根据对话ID获取角色信息")
+    @Operation(summary = "根据对话ID获取角色信息")
+    public Response<RoleDO> getChatRoleInfo(@RequestParam("chatId") String chatId) {
+        try {
+            // 1. 根据chatId查询对话信息
+            ChatDO chatDO = chatMapper.selectByUuid(chatId);
+            if (Objects.isNull(chatDO)) {
+                return Response.fail("对话不存在");
+            }
+
+            // 2. 根据roleId查询角色信息
+            RoleDO roleDO = roleMapper.selectById(chatDO.getRoleId());
+            if (Objects.isNull(roleDO)) {
+                return Response.fail("角色不存在");
+            }
+
+            return Response.success(roleDO);
+        } catch (Exception e) {
+            log.error("获取对话角色信息失败", e);
+            return Response.fail("获取角色信息失败");
+        }
     }
 
 
