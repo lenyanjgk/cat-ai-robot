@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 
 /**
  * @Author: sqnugy
- * @Date: 2025/6/15 9:00
+ * @Date: 2025/9/25 9:00
  * @Version: v1.0.0
  * @Description: AI 对话响应类
  **/
@@ -16,6 +16,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class AIResponse {
+
     // 流式响应内容
     private String v;
+
 }

@@ -20,8 +20,8 @@ import lombok.NoArgsConstructor;
 @Builder
 public class RenameChatReqVO {
 
-    @NotNull(message = "对话 ID 不能为空")
-    private Long id;
+    @NotBlank(message = "对话 ID 不能为空")
+    private String uuid;
 
     @NotBlank(message = "对话摘要不能为空")
     private String summary;

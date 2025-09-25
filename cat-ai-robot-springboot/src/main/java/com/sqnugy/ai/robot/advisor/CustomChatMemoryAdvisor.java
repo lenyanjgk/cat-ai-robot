@@ -2,18 +2,19 @@ package com.sqnugy.ai.robot.advisor;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.google.common.collect.Lists;
+import com.sqnugy.ai.robot.domain.dos.ChatDO;
 import com.sqnugy.ai.robot.domain.dos.ChatMessageDO;
+import com.sqnugy.ai.robot.domain.dos.RoleDO;
+import com.sqnugy.ai.robot.domain.mapper.ChatMapper;
 import com.sqnugy.ai.robot.domain.mapper.ChatMessageMapper;
+import com.sqnugy.ai.robot.domain.mapper.RoleMapper;
 import com.sqnugy.ai.robot.model.vo.chat.AiChatReqVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClientRequest;
 import org.springframework.ai.chat.client.ChatClientResponse;
 import org.springframework.ai.chat.client.advisor.api.StreamAdvisor;
 import org.springframework.ai.chat.client.advisor.api.StreamAdvisorChain;
-import org.springframework.ai.chat.messages.AssistantMessage;
-import org.springframework.ai.chat.messages.Message;
-import org.springframework.ai.chat.messages.MessageType;
-import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.ai.chat.messages.*;
 import reactor.core.publisher.Flux;
 
 import java.util.Comparator;
@@ -29,11 +30,19 @@ import java.util.Objects;
 @Slf4j
 public class CustomChatMemoryAdvisor implements StreamAdvisor {
 
+    private final RoleMapper roleMapper;
+
+    private final ChatMapper chatMapper;
+
     private final ChatMessageMapper chatMessageMapper;
+
     private final AiChatReqVO aiChatReqVO;
+
     private final int limit;
 
-    public CustomChatMemoryAdvisor(ChatMessageMapper chatMessageMapper, AiChatReqVO aiChatReqVO, int limit) {
+    public CustomChatMemoryAdvisor(RoleMapper roleMapper, ChatMapper chatMapper, ChatMessageMapper chatMessageMapper, AiChatReqVO aiChatReqVO, int limit) {
+        this.roleMapper = roleMapper;
+        this.chatMapper = chatMapper;
         this.chatMessageMapper = chatMessageMapper;
         this.aiChatReqVO = aiChatReqVO;
         this.limit = limit;
@@ -70,20 +79,22 @@ public class CustomChatMemoryAdvisor implements StreamAdvisor {
         // 所有消息
         List<Message> messageList = Lists.newArrayList();
 
-        // 将数据库记录转换为对应类型的消息
+        // 1️⃣ systemPrompt（角色提示词）
+        ChatDO chatDO = chatMapper.selectByUuid(chatUuid);
+        RoleDO roleDO = roleMapper.selectById(chatDO.getRoleId());
+        messageList.add(new SystemMessage(roleDO.getSystemPrompt()));
+
+        // 2️⃣ 历史消息
         for (ChatMessageDO chatMessageDO : sortedMessages) {
-            // 消息类型
-            String type  = chatMessageDO.getRole();
-            if (Objects.equals(type, MessageType.USER.getValue())) { // 用户消息
-                Message userMessage = new UserMessage(chatMessageDO.getContent());
-                messageList.add(userMessage);
-            } else if (Objects.equals(type, MessageType.ASSISTANT.getValue())) { // AI 助手消息
-                Message assistantMessage = new AssistantMessage(chatMessageDO.getContent());
-                messageList.add(assistantMessage);
+            String type = chatMessageDO.getRole();
+            if (Objects.equals(type, MessageType.USER.getValue())) {
+                messageList.add(new UserMessage(chatMessageDO.getContent()));
+            } else if (Objects.equals(type, MessageType.ASSISTANT.getValue())) {
+                messageList.add(new AssistantMessage(chatMessageDO.getContent()));
             }
         }
 
-        // 除了记忆消息，还需要添加当前用户消息
+        // 3️⃣ 当前用户消息（来自 request）
         messageList.addAll(chatClientRequest.prompt().getInstructions());
 
         // 构建一个新的 ChatClientRequest 请求对象

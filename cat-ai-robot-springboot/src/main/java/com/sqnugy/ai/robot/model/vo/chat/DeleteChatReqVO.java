@@ -8,9 +8,9 @@ import lombok.NoArgsConstructor;
 
 
 /**
- * @author: sqnugy
+ * @author: 吴光耀
  * @url: www.sqnugy.top
- * @date: 2023-09-15 14:07
+ * @date: 2026-09-25 14:07
  * @description: 删除对话
  **/
 @Data

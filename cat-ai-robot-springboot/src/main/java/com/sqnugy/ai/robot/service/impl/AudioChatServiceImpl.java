@@ -57,6 +57,7 @@ public class AudioChatServiceImpl implements AudioChatService {
         // 1️⃣ 语音转文本
         TranscriptionParam param =
                 TranscriptionParam.builder()
+                        .apiKey(apiKey)
                         .model("paraformer-v2")
                         // “language_hints”只支持paraformer-v2模型
                         .parameter("language_hints", new String[]{"zh", "en"})
@@ -118,43 +119,6 @@ public class AudioChatServiceImpl implements AudioChatService {
         }
         return null;
     }
-
-    // ===== 1️⃣ ASR 语音转文本 =====
-    public String recognize(byte[] audioBytes, String format) {
-        // 这里假设调用阿里百炼 HTTP API
-        // 可以用 RestTemplate 或 HttpClient 发送 multipart/form-data
-        // audioBytes -> 音频文件
-        // format -> wav / mp3
-        String asrResult;
-
-        // 示例（伪代码）：
-        // HttpPost request = new HttpPost(aliyunAsrUrl);
-        // request.addHeader("Authorization", "APPCODE " + apiKey);
-        // MultipartEntityBuilder builder = MultipartEntityBuilder.create();
-        // builder.addBinaryBody("audio", audioBytes, ContentType.DEFAULT_BINARY, "file." + format);
-        // request.setEntity(builder.build());
-        // HttpResponse response = httpClient.execute(request);
-        // asrResult = EntityUtils.toString(response.getEntity());
-
-        // 这里直接返回伪结果，实际需要解析 JSON
-        asrResult = "模拟识别文本";
-        return asrResult;
-    }
-
-    // ===== 2️⃣ 调用 AI 模型生成文本 =====
-//    public ChatClient.ChatClientRequestSpec options(OpenAiChatOptions options) {
-//        // 构建 ChatModel
-//        ChatModel chatModel = OpenAiChatModel.builder()
-//                .openAiApi(OpenAiApi.builder()
-//                        .baseUrl("https://api.openai.com") // 或你的 baseUrl
-//                        .apiKey("你的API_KEY")
-//                        .build())
-//                .build();
-//
-//        // 返回 ChatClientRequestSpec，用于链式调用 user() 和 execute()
-//        return ChatClient.create(chatModel).prompt().options(options);
-//    }
-
 
     public String synthesize(String text, RoleDO roleDO) {
         try {

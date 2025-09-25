@@ -48,8 +48,10 @@ public class CustomStreamLoggerAndMessage2DBAdvisor implements StreamAdvisor {
 
     @Override
     public Flux<ChatClientResponse> adviseStream(ChatClientRequest chatClientRequest, StreamAdvisorChain streamAdvisorChain) {
+
         // 对话 UUID
         String chatUuid = aiChatReqVO.getChatId();
+
         // 用户消息
         String userMessage = aiChatReqVO.getMessage();
 

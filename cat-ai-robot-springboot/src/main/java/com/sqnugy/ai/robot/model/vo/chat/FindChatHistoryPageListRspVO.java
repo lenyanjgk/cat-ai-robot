@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 /**
  * @author: sqnugy
  * @url: www.sqnugy.top
- * @date: 2023-09-15 14:07
+ * @date: 2025-09-25 14:07
  * @description: 对话分页
  **/
 @Data
@@ -19,18 +19,27 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @Builder
 public class FindChatHistoryPageListRspVO {
+
     /**
      * 对话 ID
      */
     private Long id;
+
     /**
      * 对话 UUID
      */
     private String uuid;
+
+    /**
+     * 角色名
+     */
+    private String roleName;
+
     /**
      * 对话摘要
      */
     private String summary;
+
     /**
      * 更新时间
      */

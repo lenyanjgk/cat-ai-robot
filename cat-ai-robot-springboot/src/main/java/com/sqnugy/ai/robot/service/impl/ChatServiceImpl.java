@@ -1,6 +1,8 @@
 package com.sqnugy.ai.robot.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.sqnugy.ai.robot.domain.dos.ChatDO;
@@ -74,7 +76,6 @@ public class ChatServiceImpl implements ChatService {
         return Response.success(NewChatRspVO.builder()
                 .uuid(uuid)
                 .summary(summary)
-                .roleName(roleDO.getName())
                 .build());
     }
 
@@ -131,16 +132,21 @@ public class ChatServiceImpl implements ChatService {
         Page<ChatDO> chatDOPage = chatMapper.selectPageList(current, size);
 
         List<ChatDO> chatDOS = chatDOPage.getRecords();
+
         // DO 转 VO
         List<FindChatHistoryPageListRspVO> vos = null;
         if (CollUtil.isNotEmpty(chatDOS)) {
             vos = chatDOS.stream()
-                    .map(chatDO -> FindChatHistoryPageListRspVO.builder() // 构建返参 VO
-                            .id(chatDO.getId())
-                            .uuid(chatDO.getUuid())
-                            .summary(chatDO.getSummary())
-                            .updateTime(chatDO.getUpdateTime())
-                            .build())
+                    .map(chatDO -> {
+                        RoleDO roleDO = roleMapper.selectById(chatDO.getRoleId());
+                        return FindChatHistoryPageListRspVO.builder() // 构建返参 VO
+                                .id(chatDO.getId())
+                                .uuid(chatDO.getUuid())
+                                .roleName(roleDO.getName())
+                                .summary(chatDO.getSummary())
+                                .updateTime(chatDO.getUpdateTime())
+                                .build();
+                    })
                     .collect(Collectors.toList());
         }
 
@@ -155,16 +161,16 @@ public class ChatServiceImpl implements ChatService {
      */
     @Override
     public Response<?> renameChatSummary(RenameChatReqVO renameChatReqVO) {
+
         // 对话 ID
-        Long chatId = renameChatReqVO.getId();
+        String chatId = renameChatReqVO.getUuid();
         // 摘要
         String summary = renameChatReqVO.getSummary();
 
         // 根据主键 ID 更新摘要
-        chatMapper.updateById(ChatDO.builder()
-                        .id(chatId)
-                        .summary(summary)
-                        .build());
+        chatMapper.update(null, new LambdaUpdateWrapper<ChatDO>()
+                .eq(ChatDO::getUuid, chatId)
+                .set(ChatDO::getSummary, summary));
 
         return Response.success();
     }

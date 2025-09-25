@@ -30,8 +30,10 @@ public class SearchResultContentFetcherServiceImpl implements SearchResultConten
 
     @Resource
     private OkHttpClient okHttpClient;
+
     @Resource(name = "httpRequestExecutor")
     private ThreadPoolTaskExecutor httpExecutor;
+
     @Resource(name = "resultProcessingExecutor")
     private ThreadPoolTaskExecutor processingExecutor;
 

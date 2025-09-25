@@ -71,17 +71,12 @@ public class ChatController {
     private TransactionTemplate transactionTemplate;
 
     @Resource
-    private SearXNGService searXNGService;
-
-    @Resource
-    private SearchResultContentFetcherService searchResultContentFetcherService;
-
-    @Resource
     private AudioChatService audioChatService;
 
     @Resource
     private ChatMapper chatMapper;
-    @Autowired
+
+    @Resource
     private RoleMapper roleMapper;
 
     @PostMapping("/new")
@@ -101,12 +96,12 @@ public class ChatController {
     public Flux<AIResponse> chat(@RequestBody @Validated AiChatReqVO aiChatReqVO) {
         // 用户消息
         String userMessage = aiChatReqVO.getMessage();
+
         // 模型名称
         String modelName = aiChatReqVO.getModelName();
+
         // 温度值
         Double temperature = aiChatReqVO.getTemperature();
-        // 是否开启联网搜索
-        boolean networkSearch = aiChatReqVO.getNetworkSearch();
 
         // 构建 ChatModel
         ChatModel chatModel = OpenAiChatModel.builder()
@@ -129,12 +124,15 @@ public class ChatController {
         List<Advisor> advisors = Lists.newArrayList();
 
         // 是否开启了联网搜索
-        if (networkSearch) {
-            advisors.add(new NetworkSearchAdvisor(searXNGService, searchResultContentFetcherService));
-        } else {
-            // 添加自定义对话记忆 Advisor（以最新的 50 条消息作为记忆）
-            advisors.add(new CustomChatMemoryAdvisor(chatMessageMapper, aiChatReqVO, 50));
-        }
+        // 此处废弃联网, 前端固定为 false
+//        if (networkSearch) {
+//            advisors.add(new NetworkSearchAdvisor(searXNGService, searchResultContentFetcherService));
+//        } else {
+//            // 添加自定义对话记忆 Advisor（以最新的 50 条消息作为记忆）
+//            advisors.add(new CustomChatMemoryAdvisor(chatMessageMapper, aiChatReqVO, 50));
+//        }
+
+        advisors.add(new CustomChatMemoryAdvisor(roleMapper, chatMapper, chatMessageMapper, aiChatReqVO, 50));
 
         // 添加自定义打印流式对话日志 Advisor
         advisors.add(new CustomStreamLoggerAndMessage2DBAdvisor(chatMessageMapper, aiChatReqVO, transactionTemplate));
@@ -264,24 +262,28 @@ public class ChatController {
 
     @PostMapping("/list")
     @ApiOperationLog(description = "查询历史对话")
+    @Operation(summary = "查询历史对话")
     public PageResponse<FindChatHistoryPageListRspVO> findChatHistoryPageList(@RequestBody @Validated FindChatHistoryPageListReqVO findChatHistoryPageListReqVO) {
         return chatService.findChatHistoryPageList(findChatHistoryPageListReqVO);
     }
 
     @PostMapping("/message/list")
     @ApiOperationLog(description = "查询对话历史消息")
+    @Operation(summary = "查询对话历史消息")
     public PageResponse<FindChatHistoryMessagePageListRspVO> findChatMessagePageList(@RequestBody @Validated FindChatHistoryMessagePageListReqVO findChatHistoryMessagePageListReqVO) {
         return chatService.findChatHistoryMessagePageList(findChatHistoryMessagePageListReqVO);
     }
 
     @PostMapping("/summary/rename")
     @ApiOperationLog(description = "重命名对话摘要")
+    @Operation(summary = "重命名对话摘要")
     public Response<?> renameChatSummary(@RequestBody @Validated RenameChatReqVO renameChatReqVO) {
         return chatService.renameChatSummary(renameChatReqVO);
     }
 
     @PostMapping("/delete")
     @ApiOperationLog(description = "删除对话")
+    @Operation(summary = "删除对话")
     public Response<?> deleteChat(@RequestBody @Validated DeleteChatReqVO deleteChatReqVO) {
         return chatService.deleteChat(deleteChatReqVO);
     }

@@ -19,22 +19,27 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @Builder
 public class FindChatHistoryMessagePageListRspVO {
+
     /**
      * 消息 ID
      */
     private Long id;
+
     /**
      * 对话 ID
      */
     private String chatId;
+
     /**
      * 内容
      */
     private String content;
+
     /**
      * 消息类型
      */
     private String role;
+
     /**
      * 发布时间
      */

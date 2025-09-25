@@ -25,6 +25,7 @@ public class AiChatReqVO {
     /**
      * 对话 ID
      */
+    @NotBlank(message = "对话id不能为空")
     private String chatId;
 
     /**
@@ -32,8 +33,7 @@ public class AiChatReqVO {
      */
     private Boolean networkSearch = false;
 
-    @NotBlank(message = "调用的 AI 大模型名称不能为空")
-    private String modelName;
+    private String modelName = "deepseek-v3";
 
     /**
      * 温度值，默认为 0.7

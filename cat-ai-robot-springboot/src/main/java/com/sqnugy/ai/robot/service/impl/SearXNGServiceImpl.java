@@ -30,11 +30,14 @@ import java.util.stream.StreamSupport;
 public class SearXNGServiceImpl implements SearXNGService {
 
     @Resource
-    private OkHttpClient  okHttpClient;
+    private OkHttpClient okHttpClient;
+
     @Resource
     private ObjectMapper objectMapper;
+
     @Value("${searxng.url}")
     private String searxngUrl;
+
     @Value("${searxng.count}")
     private int count;
 
