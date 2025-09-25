@@ -1,148 +1,153 @@
 <template>
-    <!-- 左边栏 -->
-    <div 
-        :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
-        class="w-64 bg-[#f9fbff] border-r border-gray-200 fixed left-0 top-0 h-full transition-transform duration-300 ease-in-out z-10 overflow-y-auto">
-        <!-- 侧边栏内容区域 -->
-        <div class="p-0 h-full flex flex-col">
-            <!-- Logo 与应用名称 -->
-            <div class="flex items-center justify-center p-4 cursor-pointer">
-              <SvgIcon name="ai-robot-logo" customCss="w-8 h-8 text-gray-700 mr-3" />
-              <span class="text-2xl font-bold font-sans tracking-wide text-gray-800">CatAICos</span>
+  <!-- 左边栏 -->
+  <div
+      :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+      class="w-64 bg-[#f9fbff] border-r border-gray-200 fixed left-0 top-0 h-full transition-transform duration-300 ease-in-out z-10 overflow-y-auto">
+    <!-- 侧边栏内容区域 -->
+    <div class="p-0 h-full flex flex-col">
+      <!-- Logo 与应用名称 -->
+      <div class="flex items-center justify-center p-4 cursor-pointer">
+        <SvgIcon name="ai-robot-logo" customCss="w-8 h-8 text-gray-700 mr-3"/>
+        <span class="text-2xl font-bold font-sans tracking-wide text-gray-800">Cat AI机器人</span>
+      </div>
+
+
+      <!-- 功能按钮区域 -->
+      <div class="px-4 mb-4 space-y-2">
+        <!-- 开启新对话按钮 -->
+        <button
+            @click="handleNewChat"
+            :class="[
+                  'w-full px-4 py-2 rounded-xl transition-colors cursor-pointer flex items-center justify-center',
+                  currentView === 'chat' ? 'new-chat-btn-active' : 'new-chat-btn'
+                ]">
+          <SvgIcon name="new-chat" customCss="w-5 h-5 mr-2 inline text-[#4d6bfe]"/>
+          开启新对话
+        </button>
+
+        <!-- 角色管理按钮 -->
+        <button
+            @click="handleRoleManagement"
+            :class="[
+                  'w-full px-4 py-2 border rounded-xl transition-colors cursor-pointer flex items-center justify-center',
+                  currentView === 'role-management' ? 'role-management-btn-active' : 'role-management-btn'
+                ]">
+          <UserOutlined
+              :class="['w-5 h-5 mr-2', currentView === 'role-management' ? 'text-blue-600' : 'text-gray-600']"/>
+          角色管理
+        </button>
+      </div>
+
+      <!-- 历史对话区域 -->
+      <div class="my-4 px-2 overflow-y-auto overflow-x-hidden flex-1">
+        <div class="space-y-1">
+          <div class="text-xs px-3 py-1 text-gray-500">历史对话</div>
+
+          <!-- 加载状态 -->
+          <div v-if="isLoading" class="flex justify-center py-4">
+            <div class="w-6 h-6 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
+          </div>
+
+          <!-- 对话列表 -->
+          <div v-for="(historyChat, index) in historyChats" :key="historyChat.id || index"
+               class="relative px-3 py-1 rounded-xl hover:bg-[rgb(239,246,255)] cursor-pointer transition-colors flex items-center justify-between"
+               :class="{ 'bg-blue-50 border border-blue-200': currentChatId === historyChat.uuid }"
+               @click="selectChat(historyChat)"
+               @mouseenter="showButton = historyChat.uuid"
+               @mouseleave="showButton = null">
+
+            <!-- 重命名输入框 -->
+            <div v-if="renamingChatId === historyChat.id" class="flex-1 mr-2" @click.stop>
+              <input
+                  v-model="newChatTitle"
+                  @keydown.enter="confirmRename"
+                  @keydown.esc="cancelRename"
+                  @blur="confirmRename"
+                  class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                  autofocus
+              />
             </div>
 
+            <!-- 对话标题 -->
+            <p v-else class="text-[14px] text-gray-800 overflow-hidden whitespace-nowrap flex-1"
+               :title="historyChat.summary">
+              {{ historyChat.summary }}
+            </p>
 
-            <!-- 开启新对话按钮 -->
-            <button 
-              @click="handleNewChat"
-              class="mx-auto mb-[34px] my-2 px-6 py-2 text-white rounded-xl transition-colors new-chat-btn w-fit cursor-pointer">
-              <SvgIcon name="new-chat" customCss="w-6 h-6 mr-1.5 inline text-[#4d6bfe]" />
-              选择新角色
-            </button>
-
-            <!-- 历史对话区域 -->
-            <div class="my-4 px-2 overflow-y-auto overflow-x-hidden flex-1">
-              <div class="space-y-1">
-                <div class="text-xs px-3 py-1 text-gray-500">历史对话</div>
-                
-                <!-- 加载状态 -->
-                <div v-if="isLoading" class="flex justify-center py-4">
-                  <div class="w-6 h-6 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
-                </div>
-                
-                <!-- 对话列表 -->
-                <div v-for="(historyChat, index) in historyChats" :key="historyChat.id || index" 
-                     class="relative px-3 py-1 rounded-xl hover:bg-[rgb(239,246,255)] cursor-pointer transition-colors flex items-center justify-between"
-                     :class="{ 'bg-blue-50 border border-blue-200': currentChatId === historyChat.uuid }"
-                     @click="selectChat(historyChat)"
-                     @mouseenter="showButton = historyChat.uuid" 
-                     @mouseleave="showButton = null">
-                    
-                    <!-- 重命名输入框 -->
-                    <div v-if="renamingChatId === historyChat.id" class="flex-1 mr-2" @click.stop>
-                      <input 
-                        v-model="newChatTitle"
-                        @keydown.enter="confirmRename"
-                        @keydown.esc="cancelRename"
-                        @blur="confirmRename"
-                        class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:border-blue-500"
-                        autofocus
-                      />
-                    </div>
-                    
-                    <!-- 对话标题 -->
-                    <p v-else class="text-[14px] text-gray-800 overflow-hidden whitespace-nowrap flex-1" 
-                       :title="historyChat.summary">
-                      {{ historyChat.summary }}
-                    </p>
-                    
-                    <!-- 下拉菜单 -->
-                    <a-dropdown v-if="renamingChatId !== historyChat.id" trigger="click">
-                         <template #overlay>
-                            <a-menu @click="({ key }) => handleMenuClick(key, historyChat)">
-                              <a-menu-item key="rename">
-                                <EditOutlined />
-                                重命名
-                              </a-menu-item>
-                              <a-menu-item key="delete" danger>
-                                <DeleteOutlined />
-                                删除
-                              </a-menu-item>
-                          </a-menu>
-                        </template>
-                        <!-- 右边菜单按钮 -->
-                        <button
-                            @click.stop
-                            class="z-10 rounded-lg outline-none justify-center items-center bg-white
+            <!-- 下拉菜单 -->
+            <a-dropdown v-if="renamingChatId !== historyChat.id" trigger="click">
+              <template #overlay>
+                <a-menu @click="({ key }) => handleMenuClick(key, historyChat)">
+                  <a-menu-item key="rename">
+                    <EditOutlined/>
+                    重命名
+                  </a-menu-item>
+                  <a-menu-item key="delete" danger>
+                    <DeleteOutlined/>
+                    删除
+                  </a-menu-item>
+                </a-menu>
+              </template>
+              <!-- 右边菜单按钮 -->
+              <button
+                  @click.stop
+                  class="z-10 rounded-lg outline-none justify-center items-center bg-white
                             w-6 h-6 flex absolute right-2 top-1/2 transform -translate-y-1/2 transition-all duration-300 hover:bg-gray-50"
-                            :style="{ opacity: showButton === historyChat.uuid ? 1 : 0 }">
-                            <EllipsisOutlined class="w-4 h-4 text-gray-500" />
-                        </button>
-                    </a-dropdown>
-                </div>
-                
-                <!-- 空状态 -->
-                <div v-if="!isLoading && historyChats.length === 0" class="text-center py-8 text-gray-500 text-sm">
-                  暂无历史对话
-                </div>
-              </div>
-            </div>
+                  :style="{ opacity: showButton === historyChat.uuid ? 1 : 0 }">
+                <EllipsisOutlined class="w-4 h-4 text-gray-500"/>
+              </button>
+            </a-dropdown>
+          </div>
+
+          <!-- 空状态 -->
+          <div v-if="!isLoading && historyChats.length === 0" class="text-center py-8 text-gray-500 text-sm">
+            暂无历史对话
+          </div>
         </div>
-    </div>
-  <!-- 角色选择弹窗 -->
-  <a-modal
-      v-model:open="showRoleModal"
-      title="选择 AI 角色"
-      :footer="null"
-      centered
-      width="360px"
-  >
-    <div class="grid grid-cols-2 gap-4 pt-2">
-      <div
-          v-for="r in roles"
-          :key="r.key"
-          @click="selectRole(r)"
-          class="flex flex-col items-center justify-center p-4 border border-gray-200 rounded-xl cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all"
-      >
-        <img :src="r.avatar" class="w-14 h-14 rounded-full mb-2" />
-        <span class="text-sm text-gray-700">{{ r.name }}</span>
       </div>
     </div>
-  </a-modal>
+  </div>
 
-    <!-- 侧边栏切换按钮 -->
-    <a-tooltip placement="bottom">
-        <!-- Tooltip 提示文字 -->
-        <template #title>
-          <span>{{ sidebarOpen ? '收缩边栏' : '打开边栏'}}</span>
-        </template>
+  <!-- 侧边栏切换按钮 -->
+  <a-tooltip placement="bottom">
+    <!-- Tooltip 提示文字 -->
+    <template #title>
+      <span>{{ sidebarOpen ? '收缩边栏' : '打开边栏' }}</span>
+    </template>
 
-        <button 
-          :class="sidebarOpen ? 'left-64' : 'left-0'"
-          @click="toggleSidebar"
-          class="fixed top-4 z-20 bg-white border border-gray-200 rounded-r-lg p-2 transition-all duration-300">
-            <!-- 图标 -->
-            <SvgIcon :name="sidebarOpen ? 'sidebar-open' : 'sidebar-close'" :customCss="sidebarOpen ? 'w-6 h-6 text-gray-400' : 'w-7 h-7 text-gray-400'" />
-        </button>
-    </a-tooltip>
+    <button
+        :class="sidebarOpen ? 'left-64' : 'left-0'"
+        @click="toggleSidebar"
+        class="fixed top-4 z-20 bg-white border border-gray-200 rounded-r-lg p-2 transition-all duration-300">
+      <!-- 图标 -->
+      <SvgIcon :name="sidebarOpen ? 'sidebar-open' : 'sidebar-close'"
+               :customCss="sidebarOpen ? 'w-6 h-6 text-gray-400' : 'w-7 h-7 text-gray-400'"/>
+    </button>
+  </a-tooltip>
 
-    
+
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { message } from 'ant-design-vue'
+import {onMounted, ref} from 'vue'
+import {message} from 'ant-design-vue'
 import SvgIcon from '@/components/SvgIcon.vue'
-import { EditOutlined, EllipsisOutlined, DeleteOutlined } from '@ant-design/icons-vue'
-import { getChatHistory, renameChat, deleteChat as deleteChatApi } from '@/api/chat.js'
+import {DeleteOutlined, EditOutlined, EllipsisOutlined, UserOutlined} from '@ant-design/icons-vue'
+import {deleteChat as deleteChatApi, getChatHistory, renameChat} from '@/api/chat.js'
+import {useRouter} from 'vue-router'
+
 // 定义 props, 对外部暴露配置项
 const props = defineProps({
-  sidebarOpen: { type: Boolean, required: true }, // 左边栏是否展开
-  currentChatId: { type: String, default: null }, // 当前选中的对话ID
+  sidebarOpen: {type: Boolean, required: true}, // 左边栏是否展开
+  currentChatId: {type: String, default: null}, // 当前选中的对话ID
+  currentView: {type: String, default: 'chat'}, // 当前视图
 })
 
 // 定义emits
-const emit = defineEmits(['toggle-sidebar', 'select-chat', 'new-chat', 'chat-deleted'])
+const emit = defineEmits(['toggle-sidebar', 'select-chat', 'new-chat', 'chat-deleted', 'switch-view'])
+
+// 路由
+const router = useRouter()
 
 // 切换侧边栏显示/隐藏
 const toggleSidebar = () => {
@@ -176,35 +181,21 @@ const loadChatHistory = async () => {
     isLoading.value = false
   }
 }
-const roles = ref([
-  { key: 'conan', name: '柯南', avatar: '/avatar/conan.png' },
-  { key: 'xiyangyang', name: '喜羊羊', avatar: '/avatar/xiyangyang.png' },
-  { key: 'xiaohongmao', name: '小红帽', avatar: '/avatar/red.png' },
-  { key: 'robot', name: '默认机器人', avatar: '/avatar/robot.png' }
-])
-
-// 弹窗开关
-const showRoleModal = ref(false)
-
-// 原「新建对话」按钮回调不再直接 emit，而是先弹窗
-const handleNewChat = () => {
-  showRoleModal.value = true
-}
-
-// 选中角色后关闭弹窗并通知父组件
-const selectRole = (role) => {
-  showRoleModal.value = false
-  console.log("aaaa")
-  emit('new-chat', role)   // 把完整角色对象带出去
-}
 
 // 新建对话
-// const handleNewChat = () => {
-//   emit('new-chat')
-// }
+const handleNewChat = () => {
+  emit('switch-view', 'chat')
+  emit('new-chat')
+}
+
+// 角色管理
+const handleRoleManagement = () => {
+  emit('switch-view', 'role-management')
+}
 
 // 选择对话
 const selectChat = (chat) => {
+  emit('switch-view', 'chat')
   emit('select-chat', chat)
 }
 
@@ -261,7 +252,7 @@ const confirmDelete = async (chat) => {
       // 从本地列表中移除
       historyChats.value = historyChats.value.filter(c => c.id !== chat.id)
       message.success('删除成功')
-      
+
       // 如果删除的是当前选中的对话，通知父组件
       if (props.currentChatId === chat.uuid) {
         emit('chat-deleted')
@@ -299,5 +290,36 @@ defineExpose({
 
 .new-chat-btn:hover {
   background-color: #c6dcf8;
+}
+
+.new-chat-btn-active {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.new-chat-btn-active:hover {
+  background-color: #2563eb;
+}
+
+.role-management-btn {
+  background-color: white;
+  color: #64748b;
+  border-color: #d1d5db;
+}
+
+.role-management-btn:hover {
+  background-color: #f8fafc;
+  border-color: #9ca3af;
+}
+
+.role-management-btn-active {
+  background-color: #dbeafe;
+  color: #1e40af;
+  border-color: #3b82f6;
+}
+
+.role-management-btn-active:hover {
+  background-color: #bfdbfe;
+  border-color: #2563eb;
 }
 </style>

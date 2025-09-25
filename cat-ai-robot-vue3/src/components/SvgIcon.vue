@@ -1,11 +1,11 @@
 <template>
   <svg aria-hidden="true" :class="customCss">
-    <use :href="symbolId" />
+    <use :href="symbolId"/>
   </svg>
 </template>
 
 <script setup>
-import { defineProps, computed } from 'vue'
+import {computed, defineProps} from 'vue'
 
 /**
  * 定义组件 Props (父组件可以传入的参数)

@@ -1,17 +1,17 @@
 <template>
   <div class="markdown-container">
     <div v-html="renderedContent">
-    </div>    
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, watch, nextTick } from 'vue'
+import {nextTick, ref, watch} from 'vue'
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/github.css' // 导入 GitHub 风格的高亮样式
 import markdownItHighlightJs from 'markdown-it-highlightjs'
-import { message } from 'ant-design-vue'
+import {message} from 'ant-design-vue'
 
 // 定义一个 content 字段，用于父组件传入 markdown
 const props = defineProps({
@@ -35,14 +35,14 @@ const md = new MarkdownIt({
 })
 
 // 使用代码高亮插件
-md.use(markdownItHighlightJs, { 
+md.use(markdownItHighlightJs, {
   hljs,
   auto: true, // 自动检测语言
   code: true  // 高亮内联代码
 })
 
 // 保存默认的代码块渲染规则
-const defaultRender = md.renderer.rules.fence || function(tokens, idx, options, env, renderer) {
+const defaultRender = md.renderer.rules.fence || function (tokens, idx, options, env, renderer) {
   // 调用默认的渲染函数处理代码块
   return renderer.renderToken(tokens, idx, options)
 }
@@ -54,17 +54,17 @@ md.renderer.rules.fence = function (tokens, idx, options, env, renderer) {
   // 处理语言信息：移除转义字符并去除首尾空格
   const info = token.info ? md.utils.unescapeAll(token.info).trim() : ''
   let langName = ''
-  
+
   // 如果存在语言信息
   if (info) {
     // 分割信息字符串
     const langCode = info.split(/\s+/g)[0] // 取第一个部分作为语言标识，如 ```js
     langName = langCode.toLowerCase() // 转换为小写统一格式
   }
-  
+
   // 使用默认渲染器生成代码块的 HTML 内容
   const originalContent = defaultRender(tokens, idx, options, env, renderer)
-  
+
   // 拼装最终的 HTML
   let finalContent = `<div class="code-block-wrapper">
       <div class="code-header">
@@ -104,26 +104,26 @@ const setupCopyFunction = () => {
         // 1. 获取目标代码元素
         const codeElement = document.getElementById(codeId)
         if (!codeElement) return // 元素不存在则退出
-        
+
         // 2. 获取待复制的代码内容
         // 从元素的 data-code 属性获取 URL 编码的代码内容并解码
         const codeContent = decodeURIComponent(codeElement.getAttribute('data-code'))
-        
+
         // 3. 写入剪贴板
         await navigator.clipboard.writeText(codeContent)
-        
+
         // 显示复制成功反馈
         const btn = codeElement.parentElement.querySelector('.copy-code-btn')
         if (btn) {
           // 保存原始图标 SVG
           const originalIcon = btn.querySelector('.copy-icon').innerHTML
-          
+
           // 替换为对号图标
           btn.querySelector('.copy-icon').innerHTML = `<path d="M912 190h-69.9c-9.8 0-19.1 4.5-25.1 12.2L404.7 724.5 207 474c-6.1-7.7-15.3-12.2-25.1-12.2H112c-6.7 0-10.4 7.7-6.3 12.9L357.1 864c12.6 16.1 35.5 16.1 48.1 0L918.3 202.9c4.1-5.2 0.4-12.9-6.3-12.9z" p-id="4582"></path>`
           // 添加复制成功状态类
           btn.classList.add('copied')
           message.success('复制成功')
-          
+
           // 1秒后恢复原始图标
           setTimeout(() => {
             btn.querySelector('.copy-icon').innerHTML = originalIcon
@@ -149,7 +149,7 @@ watch(() => props.content, (newVal) => {
       setupCopyFunction()
     })
   }
-}, { immediate: true })
+}, {immediate: true})
 </script>
 
 <style scoped>
@@ -195,7 +195,7 @@ watch(() => props.content, (newVal) => {
 :deep(p) {
   line-height: 1.7;
   margin: calc(1.143 * 12px) 0;
-  font-size: calc(1.143* 14px);
+  font-size: calc(1.143 * 14px);
 }
 
 :deep(ul) {
@@ -258,10 +258,10 @@ watch(() => props.content, (newVal) => {
 
 /* 语言标签样式 */
 :deep(.code-language-label) {
-    color: rgb(82 82 82);
-    margin-left: 8px;
-    font-size: 12px;
-    line-height: 18px;
+  color: rgb(82 82 82);
+  margin-left: 8px;
+  font-size: 12px;
+  line-height: 18px;
 }
 
 /* 代码高亮样式优化 */

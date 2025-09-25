@@ -1,6 +1,6 @@
 import './assets/main.css'
 
-import { createApp } from 'vue'
+import {createApp} from 'vue'
 import App from './App.vue'
 // 导入路由
 import router from './router'
