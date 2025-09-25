@@ -1,4 +1,4 @@
-const BASE_URL = 'http://localhost:8081'
+import { BASE_URL, DEFAULT_HEADERS } from '@/config/api.js'
 
 /**
  * 分页查询角色列表
@@ -10,9 +10,7 @@ export const getRoles = async (current = 1, size = 20) => {
     try {
         const response = await fetch(`${BASE_URL}/role/page`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: DEFAULT_HEADERS,
             body: JSON.stringify({current, size})
         })
 
@@ -41,9 +39,7 @@ export const getRoleById = async (id) => {
     try {
         const response = await fetch(`${BASE_URL}/role/get?id=${id}`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            }
+            headers: DEFAULT_HEADERS
         })
 
         if (!response.ok) {
@@ -71,9 +67,7 @@ export const createRole = async (roleData) => {
     try {
         const response = await fetch(`${BASE_URL}/role/create`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: DEFAULT_HEADERS,
             body: JSON.stringify(roleData)
         })
 
@@ -102,9 +96,7 @@ export const updateRole = async (roleData) => {
     try {
         const response = await fetch(`${BASE_URL}/role/update`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: DEFAULT_HEADERS,
             body: JSON.stringify(roleData)
         })
 
@@ -133,9 +125,7 @@ export const deleteRole = async (id) => {
     try {
         const response = await fetch(`${BASE_URL}/role/delete?id=${id}`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            }
+            headers: DEFAULT_HEADERS
         })
 
         if (!response.ok) {

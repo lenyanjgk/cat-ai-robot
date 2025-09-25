@@ -109,6 +109,7 @@
 import {computed, onMounted, reactive, ref, watch} from 'vue'
 import {message} from 'ant-design-vue'
 import {CheckCircleFilled, SearchOutlined, UserOutlined} from '@ant-design/icons-vue'
+import {getRoles} from '@/api/role.js'
 
 // Props
 const props = defineProps({
@@ -173,29 +174,15 @@ watch(visible, (newVal) => {
 const loadRoles = async (current = 1) => {
   try {
     loading.value = true
-
-    const response = await fetch('http://localhost:8081/role/page', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        current,
-        size: pagination.pageSize
-      })
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const result = await response.json()
+    
+    const result = await getRoles(current, pagination.pageSize)
+    
     if (result.success) {
       roleList.value = result.data || []
       pagination.total = result.total || 0
       pagination.current = current
     } else {
-      message.error('加载角色列表失败')
+      message.error(result.message || '加载角色列表失败')
     }
   } catch (error) {
     console.error('加载角色列表错误:', error)

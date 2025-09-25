@@ -2,7 +2,7 @@
  * 聊天相关API接口
  */
 
-const BASE_URL = 'http://localhost:8081'
+import { BASE_URL, DEFAULT_HEADERS, STREAM_HEADERS } from '@/config/api.js'
 
 /**
  * 新建对话
@@ -13,9 +13,7 @@ const BASE_URL = 'http://localhost:8081'
 export const newChat = async (message, roleId) => {
     const response = await fetch(`${BASE_URL}/chat/new`, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers: DEFAULT_HEADERS,
         body: JSON.stringify({message, roleId})
     })
 
@@ -35,9 +33,7 @@ export const newChat = async (message, roleId) => {
 export const getChatHistory = async (current = 1, size = 20) => {
     const response = await fetch(`${BASE_URL}/chat/list`, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers: DEFAULT_HEADERS,
         body: JSON.stringify({current, size})
     })
 
@@ -58,9 +54,7 @@ export const getChatHistory = async (current = 1, size = 20) => {
 export const getChatMessages = async (chatId, current = 1, size = 50) => {
     const response = await fetch(`${BASE_URL}/chat/message/list`, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers: DEFAULT_HEADERS,
         body: JSON.stringify({chatId, current, size})
     })
 
@@ -80,9 +74,7 @@ export const getChatMessages = async (chatId, current = 1, size = 50) => {
 export const renameChat = async (id, summary) => {
     const response = await fetch(`${BASE_URL}/chat/summary/rename`, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers: DEFAULT_HEADERS,
         body: JSON.stringify({id, summary})
     })
 
@@ -101,9 +93,7 @@ export const renameChat = async (id, summary) => {
 export const deleteChat = async (uuid) => {
     const response = await fetch(`${BASE_URL}/chat/delete`, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers: DEFAULT_HEADERS,
         body: JSON.stringify({uuid})
     })
 
@@ -131,11 +121,7 @@ export const sendChatMessage = async (params) => {
 
     const response = await fetch(`${BASE_URL}/chat/completion`, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'text/event-stream',
-            'Cache-Control': 'no-cache'
-        },
+        headers: STREAM_HEADERS,
         body: JSON.stringify({
             message,
             chatId,
@@ -170,9 +156,7 @@ export const sendChatMessage = async (params) => {
 export const getChatRoleInfo = async (chatId) => {
     const response = await fetch(`${BASE_URL}/chat/role/info?chatId=${chatId}`, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        }
+        headers: DEFAULT_HEADERS
     })
 
     if (!response.ok) {
