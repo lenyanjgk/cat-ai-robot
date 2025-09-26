@@ -7,7 +7,8 @@
     <div class="p-0 h-full flex flex-col">
       <!-- Logo 与应用名称 -->
       <div class="flex items-center justify-center p-4 cursor-pointer">
-        <SvgIcon name="ai-robot-logo" customCss="w-8 h-8 text-gray-700 mr-3"/>
+        <SvgIcon name="cat" customCss="w-8 h-8 text-gray-700 mr-3"/>
+
         <span class="text-2xl font-bold font-sans tracking-wide text-gray-800">Cat AI机器人</span>
       </div>
 
