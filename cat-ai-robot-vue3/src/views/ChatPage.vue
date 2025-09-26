@@ -1,28 +1,36 @@
 <template>
   <div class="h-screen flex flex-col overflow-y-auto" ref="chatContainer">
     <!-- 聊天记录区域 -->
-    <div class="flex-1 max-w-3xl mx-auto pb-24 pt-4 px-4">
+    <div class="flex-1 w-full mx-auto pb-24 pt-4 px-4">
       <!-- 聊天记录 -->
       <template v-for="(chat, index) in chatList" :key="index">
         <!-- 用户提问消息（靠右） -->
         <div v-if="chat.role === 'user'" class="user-message-wrapper">
-          <div class="quesiton-container">
-            <p>{{ chat.content }}</p>
+
+          <div v-if="chat.type==='audio'">
+            <audio controls :src="chat.content" style="max-width:250px"></audio>
           </div>
+          <div v-else class="quesiton-container"> <p>{{ chat.content }}</p></div>
+          <SvgIcon name="cat" customCss="w-20 h-20"></SvgIcon>
         </div>
 
         <!-- 大模型回复消息（靠左） -->
         <div v-else class="assistant-message-wrapper">
           <!-- 头像 -->
           <div class="assistant-avatar">
-            <div class="w-8 h-8 rounded-full flex items-center justify-center border border-gray-200">
-              <SvgIcon name="deepseek-logo" customCss="w-5 h-5"></SvgIcon>
+            <div class="w-15 h-15 rounded-full flex items-center justify-center border border-gray-200">
+              <SvgIcon name="girl" customCss="w-20 h-20"></SvgIcon>
             </div>
           </div>
           <!-- 回复的内容 -->
-          <div class="assistant-message-container">
-            <StreamMarkdownRender :content="chat.content"/>
+
+          <div v-if="chat.type==='audio'">
+            <audio controls :src="chat.content" style="max-width:250px"></audio>
           </div>
+          <div v-else class="quesiton-container">  <div class="assistant-message-container">
+            <StreamMarkdownRender :content="chat.content"/>
+          </div></div>
+
         </div>
       </template>
     </div>
@@ -101,6 +109,8 @@
           </div>
         </div>
 
+
+
         <div class="bg-gray-100 rounded-3xl px-4 py-3 border border-gray-200 flex flex-col">
         <textarea
             v-model="message"
@@ -116,6 +126,24 @@
 
           <!-- 发送按钮和设置按钮 -->
           <div class="flex justify-between items-center mt-3">
+            <!-- 语音按钮 -->
+            <button
+                @click="toggleVoice"
+                :class="isRecording ? 'bg-red-500 hover:bg-red-600' : 'bg-gray-200 hover:bg-gray-300'"
+                class="flex items-center justify-center rounded-full w-8 h-8 border border-gray-300 transition-colors"
+                :title="isRecording ? '停止录音' : '开始语音聊天'"
+
+            >
+              <!-- 图标：录音时显示红色方块，平时显示麦克风 -->
+              <svg v-if="!isRecording" class="w-4 h-4 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd"
+                      d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z"
+                      clip-rule="evenodd"/>
+              </svg>
+              <svg v-else class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <rect x="6" y="6" width="8" height="8" rx="1"/>
+              </svg>
+            </button>
             <!-- 设置按钮 -->
             <button
                 @click="showSettings = !showSettings"
@@ -208,6 +236,68 @@ const chatSettings = ref({
   networkSearch: false,
   roleId: null // 添加roleId字段
 })
+/* -------- 语音聊天 -------- */
+const isRecording = ref(false)          // 是否正在录音
+
+// 点击语音按钮的回调
+async function toggleVoice () {
+  if (isRecording.value) {
+    await stopRecording()
+  } else {
+    await startRecording()
+  }
+}
+
+// ① 开始录音（TODO：真正打开麦克风）
+let mediaRecorder = null
+let audioChunks = []
+
+async function startRecording () {
+  console.log('[Voice] startRecording')
+  try {
+    // 获取麦克风流
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    //    这里用 webm
+    mediaRecorder = new MediaRecorder(stream)
+    audioChunks = []
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data && e.data.size > 0) audioChunks.push(e.data)
+    }
+
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(audioChunks, { type: 'audio/webm' }) // ★ 上传用
+      console.log('[Voice] 录音完成', blob)
+      uploadAudio(blob)
+      // 释放麦克风
+      stream.getTracks().forEach(t => t.stop())
+    }
+    mediaRecorder.start()
+    isRecording.value = true
+  } catch (err) {
+    console.error('麦克风权限失败', err)
+    message.error('无法访问麦克风，请检查权限')
+  }
+}
+
+// 停止录音（TODO：真正关闭麦克风并上传）
+async function stopRecording () {
+  if (!mediaRecorder || mediaRecorder.state === 'inactive') return
+  mediaRecorder.stop()   // 触发 onstop 回调
+  isRecording.value = false
+}
+
+async function uploadAudio (audioBlob) {
+  const form = new FormData()
+  form.append('file', audioBlob, 'voice.webm')
+  const res = await fetch('http://localhost:8081/file/upload', {
+    method: 'POST',
+    body: form
+  })
+  const json = await res.json();
+  console.log(json);
+  sendVedioMessage(json.data.url)
+}
+
 
 // 角色选择器状态
 const showRoleSelector = ref(false)
@@ -237,6 +327,197 @@ const autoResize = () => {
 // SSE 相关
 let streamReader = null;
 let isStreaming = ref(false)
+
+const sendVedioMessage = async (videoUrl) => {
+  console.log("接受到了url:"+videoUrl)
+  // 校验发送的消息不能为空
+  if (!videoUrl || isLoading.value || isStreaming.value) return
+
+  // 校验roleId是否为空
+  if (!chatSettings.value.roleId) {
+    showRoleSelector.value = true
+    return
+  }
+
+  // 通知父组件有新消息，获取或创建chatId
+  let actualChatId = props.currentChatId
+  if (!actualChatId) {
+    // 创建新对话
+    const messageData = { role: 'user', content: videoUrl };
+    const newChatId = await props.createNewChat(messageData, chatSettings.value.roleId)
+    actualChatId = newChatId
+  } else {
+    // 现有对话，正常发送消息事件
+    emit('new-message', {role: 'user', content: videoUrl})
+  }
+
+  // 点击发送按钮后，清空输入框
+  message.value = ''
+  // 将输入框的高度重置
+  if (textareaRef.value) {
+    textareaRef.value.style.height = 'auto'
+  }
+
+  // 添加一个占位的回复消息
+  chatList.value.push({
+    role: 'user',
+    content: videoUrl,   // 语音 URL
+    type: 'audio'        // 新增字段，用来区分文本/语音
+  })
+
+  isLoading.value = true
+  isStreaming.value = true
+
+  try {
+    // 直接使用fetch处理SSE流
+    const response = await fetch('http://localhost:8081/chat/voice-chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'text/event-stream',
+        'Cache-Control': 'no-cache'
+      },
+      body: JSON.stringify({
+        audioFileUrl: videoUrl,
+        chatId: actualChatId,
+        modelName: chatSettings.value.modelName,
+        temperature: chatSettings.value.temperature,
+        networkSearch: chatSettings.value.networkSearch,
+        roleId: chatSettings.value.roleId
+      })
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+
+    // 获取ReadableStream
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+
+    let responseText = ''
+    let buffer = ''
+
+    try {
+      while (true) {
+        const {done, value} = await reader.read()
+
+        if (done) {
+          break
+        }
+
+        // 解码数据块
+        const chunk = decoder.decode(value, {stream: true})
+        buffer += chunk
+        // 处理每一行数据
+        let lines = buffer.split('\n')
+        buffer = lines.pop() || '' // 保留最后不完整的行
+
+        for (let line of lines) {
+          line = line.trim()
+          if (!line) continue
+
+          try {
+            // 直接尝试解析JSON
+            const jsonData = JSON.parse(line)
+            if (jsonData && jsonData.v !== undefined) {
+              responseText += jsonData.v
+
+              // 实时更新UI
+              const lastIndex = chatList.value.length - 1
+              if (lastIndex >= 0) {
+                chatList.value[lastIndex] = {
+                  ...chatList.value[lastIndex],
+                  content: responseText
+                }
+                // 强制Vue更新
+                nextTick(() => {
+                  scrollToBottom()
+                })
+              }
+            }
+          } catch (e) {
+            // 尝试SSE格式：data: {...} 或 data:{...}
+            if (line.startsWith('data:')) {
+              let dataStr = ''
+              if (line.startsWith('data: ')) {
+                dataStr = line.substring(6).trim()
+              } else if (line.startsWith('data:')) {
+                dataStr = line.substring(5).trim()
+              }
+
+              if (dataStr && dataStr !== '[DONE]') {
+                try {
+                  const jsonData = JSON.parse(dataStr)
+                  if (jsonData && jsonData.v !== undefined) {
+                    responseText += jsonData.v
+
+                    // 实时更新UI
+                    const lastIndex = chatList.value.length - 1
+                    if (lastIndex >= 0) {
+                      chatList.value[lastIndex] = {
+                        ...chatList.value[lastIndex],
+                        content: responseText
+                      }
+                      // 强制Vue更新
+                      nextTick(() => {
+                        scrollToBottom()
+                      })
+                    }
+                  }
+                } catch (sseError) {
+                  // SSE解析失败，跳过
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // 处理最后的缓冲区
+      if (buffer.trim()) {
+        try {
+          const jsonData = JSON.parse(buffer.trim())
+          if (jsonData && jsonData.v !== undefined) {
+            responseText += jsonData.v
+            const lastIndex = chatList.value.length - 1
+            if (lastIndex >= 0) {
+              chatList.value[lastIndex] = {
+                ...chatList.value[lastIndex],
+                content: responseText
+              }
+              nextTick(() => {
+                scrollToBottom()
+              })
+            }
+          }
+        } catch (e) {
+          // 最后缓冲区解析失败，跳过
+        }
+      }
+
+    } catch (error) {
+      console.error('读取流数据错误:', error)
+      chatList.value[chatList.value.length - 1].content = '抱歉，请求出错了，请稍后重试。'
+    } finally {
+      reader.releaseLock()
+    }
+
+    // 通知父组件AI回复完成
+    if (responseText) {
+      emit('new-message', {role: 'assistant', content: responseText})
+    }
+
+  } catch (error) {
+    console.error('发送消息错误:', error)
+    chatList.value[chatList.value.length - 1].content = '抱歉，请求出错了，请稍后重试。'
+  } finally {
+    isLoading.value = false
+    isStreaming.value = false
+    streamReader = null
+  }
+}
 
 // 发送消息
 const sendMessage = async () => {

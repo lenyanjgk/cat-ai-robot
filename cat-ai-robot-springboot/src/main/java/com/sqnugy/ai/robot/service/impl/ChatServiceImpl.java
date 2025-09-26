@@ -26,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -135,7 +136,7 @@ public class ChatServiceImpl implements ChatService {
         // DO 转 VO
         List<FindChatHistoryPageListRspVO> vos = null;
         if (CollUtil.isNotEmpty(chatDOS)) {
-            vos = chatDOS.stream()
+            vos = chatDOS.stream().filter(chatDO -> chatDO.getRoleId()!=null)
                     .map(chatDO -> {
                         RoleDO roleDO = roleMapper.selectById(chatDO.getRoleId());
                         return FindChatHistoryPageListRspVO.builder() // 构建返参 VO
