@@ -60,11 +60,16 @@
                   <span v-if="role.voiceModelName" class="tag">{{ role.voiceModelName }}</span>
                 </div>
               </div>
+              <div class="w-15 h-15 rounded-full flex items-center justify-center border border-gray-200">
+                <SvgIcon name="girl" customCss="w-20 h-20"></SvgIcon>
+              </div>
 
               <!-- 选择状态 -->
               <div v-if="selectedRole?.id === role.id" style="margin-left: 0.75rem;">
                 <CheckCircleFilled class="text-blue-500 text-lg"/>
               </div>
+
+
             </div>
           </div>
         </div>
@@ -110,6 +115,7 @@ import {computed, onMounted, reactive, ref, watch} from 'vue'
 import {message} from 'ant-design-vue'
 import {CheckCircleFilled, SearchOutlined, UserOutlined} from '@ant-design/icons-vue'
 import {getRoles} from '@/api/role.js'
+import SvgIcon from "@/components/SvgIcon.vue";
 
 // Props
 const props = defineProps({

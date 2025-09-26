@@ -86,7 +86,8 @@ const handleSelectChat = async (chat) => {
     if (messagesResponse.success && messagesResponse.data) {
       currentChatMessages.value = messagesResponse.data.map(msg => ({
         role: msg.role,
-        content: msg.content
+        content: msg.content,
+        audioUrl:msg.audioUrl
       }))
     } else {
       currentChatMessages.value = []

@@ -6,11 +6,12 @@
       <template v-for="(chat, index) in chatList" :key="index">
         <!-- 用户提问消息（靠右） -->
         <div v-if="chat.role === 'user'" class="user-message-wrapper">
-
-          <div v-if="chat.type==='audio'">
-            <audio controls :src="chat.content" style="max-width:250px"></audio>
+          <div class="quesiton-container">
+            <div v-if="chat.audioUrl!=null">
+              <audio controls :src="chat.audioUrl" style="max-width:250px"></audio>
+            </div>
+            <p>{{ chat.content }}</p>
           </div>
-          <div v-else class="quesiton-container"> <p>{{ chat.content }}</p></div>
           <SvgIcon name="cat" customCss="w-20 h-20"></SvgIcon>
         </div>
 
@@ -24,12 +25,15 @@
           </div>
           <!-- 回复的内容 -->
 
-          <div v-if="chat.type==='audio'">
-            <audio controls :src="chat.content" style="max-width:250px"></audio>
-          </div>
-          <div v-else class="quesiton-container">  <div class="assistant-message-container">
+
+          <div class="quesiton-container">
+            <div v-if="chat.audioUrl!=null">
+              <audio controls :src="chat.audioUrl" style="max-width:250px"></audio>
+            </div>
+            <div class="assistant-message-container">
             <StreamMarkdownRender :content="chat.content"/>
-          </div></div>
+          </div>
+          </div>
 
         </div>
       </template>
