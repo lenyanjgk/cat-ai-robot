@@ -182,14 +182,17 @@ public class ChatController {
         String reply = chatClientRequestSpec.call().content();
         String cleanedReplyText = reply.replaceAll("\\（.*?\\）|\\(.*?\\)", "");
 
-        // 4.1 持久化用户 ASR 文本与 AI 回复（同一事务）
+        // 5️⃣ 文本转语音
+        String replyAudioUrl = audioChatService.synthesize(cleanedReplyText, roleDO);
+
+        // 5.2 持久化用户 ASR 文本与 AI 回复（同一事务）
         transactionTemplate.execute(status -> {
             try {
                 // 用户 ASR 文本
-                chatMessageMapper.insert(ChatMessageDO.builder().chatUuid(chatId).content(userMessage).role(MessageType.USER.getValue()).createTime(LocalDateTime.now()).build());
+                chatMessageMapper.insert(ChatMessageDO.builder().chatUuid(chatId).audioUrl(audioFileUrl).content(userMessage).role(MessageType.USER.getValue()).createTime(LocalDateTime.now()).build());
 
                 // AI 回复
-                chatMessageMapper.insert(ChatMessageDO.builder().chatUuid(chatId).content(reply).role(MessageType.ASSISTANT.getValue()).createTime(LocalDateTime.now()).build());
+                chatMessageMapper.insert(ChatMessageDO.builder().chatUuid(chatId).audioUrl(replyAudioUrl).content(reply).role(MessageType.ASSISTANT.getValue()).createTime(LocalDateTime.now()).build());
 
                 return true;
             } catch (Exception ex) {
@@ -198,9 +201,6 @@ public class ChatController {
             }
             return false;
         });
-
-        // 5️⃣ 文本转语音
-        String replyAudioUrl = audioChatService.synthesize(cleanedReplyText, roleDO);
 
         // 6️⃣ 返回
         VoiceChatRspVO rspVO = VoiceChatRspVO.builder().replyText(reply).replyAudioUrl(replyAudioUrl).build();

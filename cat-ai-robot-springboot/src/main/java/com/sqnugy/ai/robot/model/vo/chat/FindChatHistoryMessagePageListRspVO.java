@@ -31,6 +31,11 @@ public class FindChatHistoryMessagePageListRspVO {
     private String chatId;
 
     /**
+     * 音频地址
+     */
+    private String audioUrl;
+
+    /**
      * 内容
      */
     private String content;

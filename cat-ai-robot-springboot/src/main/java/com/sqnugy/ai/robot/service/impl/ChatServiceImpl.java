@@ -104,6 +104,7 @@ public class ChatServiceImpl implements ChatService {
                     .map(chatMessageDO -> FindChatHistoryMessagePageListRspVO.builder() // 构建返参 VO 实体类
                             .id(chatMessageDO.getId())
                             .chatId(chatMessageDO.getChatUuid())
+                            .audioUrl(chatMessageDO.getAudioUrl())
                             .content(chatMessageDO.getContent())
                             .role(chatMessageDO.getRole())
                             .createTime(chatMessageDO.getCreateTime())

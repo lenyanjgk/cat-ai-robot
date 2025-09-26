@@ -25,8 +25,14 @@ public class ChatMessageDO {
 
     @TableId(type = IdType.AUTO)
     private Long id;
+
     private String chatUuid;
+
+    private String audioUrl;
+
     private String content;
+
     private String role;
+
     private LocalDateTime createTime;
 }
