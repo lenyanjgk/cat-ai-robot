@@ -7,7 +7,7 @@
         <!-- 用户提问消息（靠右） -->
         <div v-if="chat.role === 'user'" class="user-message-wrapper">
           <div class="quesiton-container">
-            <div v-if="chat.audioUrl!=null">
+            <div v-if="chat.audioUrl">
               <audio controls :src="chat.audioUrl" style="max-width:250px"></audio>
             </div>
             <p>{{ chat.content }}</p>
@@ -17,24 +17,20 @@
 
         <!-- 大模型回复消息（靠左） -->
         <div v-else class="assistant-message-wrapper">
-          <!-- 头像 -->
           <div class="assistant-avatar">
             <div class="w-15 h-15 rounded-full flex items-center justify-center border border-gray-200">
               <SvgIcon name="girl" customCss="w-20 h-20"></SvgIcon>
             </div>
           </div>
-          <!-- 回复的内容 -->
-
 
           <div class="quesiton-container">
-            <div v-if="chat.audioUrl!=null">
+            <div v-if="chat.audioUrl">
               <audio controls :src="chat.audioUrl" style="max-width:250px"></audio>
             </div>
             <div class="assistant-message-container">
-            <StreamMarkdownRender :content="chat.content"/>
+              <StreamMarkdownRender :content="chat.content"/>
+            </div>
           </div>
-          </div>
-
         </div>
       </template>
     </div>
@@ -299,7 +295,7 @@ async function uploadAudio (audioBlob) {
   })
   const json = await res.json();
   console.log(json);
-  sendVedioMessage(json.data.url)
+  sendVideoMessage(json.data.url)
 }
 
 
@@ -332,8 +328,8 @@ const autoResize = () => {
 let streamReader = null;
 let isStreaming = ref(false)
 
-const sendVedioMessage = async (videoUrl) => {
-  console.log("接受到了url:"+videoUrl)
+const sendVideoMessage = async (videoUrl) => {
+  console.log("接受到了url:" + videoUrl)
   // 校验发送的消息不能为空
   if (!videoUrl || isLoading.value || isStreaming.value) return
 
@@ -343,46 +339,54 @@ const sendVedioMessage = async (videoUrl) => {
     return
   }
 
+  // 保存原始URL，因为后面会清空
+  const originalVideoUrl = videoUrl
+
   // 通知父组件有新消息，获取或创建chatId
   let actualChatId = props.currentChatId
   if (!actualChatId) {
     // 创建新对话
-    const messageData = { role: 'user', content: videoUrl };
+    const messageData = { role: 'user', content: '', audioUrl: originalVideoUrl };
     const newChatId = await props.createNewChat(messageData, chatSettings.value.roleId)
     actualChatId = newChatId
   } else {
     // 现有对话，正常发送消息事件
-    emit('new-message', {role: 'user', content: videoUrl})
+    emit('new-message', {role: 'user', content: '', audioUrl: originalVideoUrl})
   }
 
   // 点击发送按钮后，清空输入框
-  message.value = ''
+  videoUrl = ''
   // 将输入框的高度重置
   if (textareaRef.value) {
     textareaRef.value.style.height = 'auto'
   }
 
-  // 添加一个占位的回复消息
+  // 添加一个占位的用户消息（包含语音）
   chatList.value.push({
     role: 'user',
-    content: videoUrl,   // 语音 URL
-    type: 'audio'        // 新增字段，用来区分文本/语音
+    content: '',
+    audioUrl: originalVideoUrl  // 使用保存的原始URL
+  })
+
+  // 添加一个占位的AI回复消息
+  chatList.value.push({
+    role: 'assistant',
+    content: '',
+    audioUrl: null  // 初始化为null，后面会更新
   })
 
   isLoading.value = true
   isStreaming.value = true
 
   try {
-    // 直接使用fetch处理SSE流
     const response = await fetch('http://localhost:8081/chat/voice-chat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'text/event-stream',
         'Cache-Control': 'no-cache'
       },
       body: JSON.stringify({
-        audioFileUrl: videoUrl,
+        audioFileUrl: originalVideoUrl,
         chatId: actualChatId,
         modelName: chatSettings.value.modelName,
         temperature: chatSettings.value.temperature,
@@ -395,131 +399,51 @@ const sendVedioMessage = async (videoUrl) => {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
+    // 直接解析JSON响应
+    const responseData = await response.json()
+    console.log('后端响应:', responseData)
 
-    // 获取ReadableStream
-    const reader = response.body.getReader()
-    const decoder = new TextDecoder()
-
+    // 从响应数据中提取信息
     let responseText = ''
-    let buffer = ''
+    let responseAudioUrl = null
 
-    try {
-      while (true) {
-        const {done, value} = await reader.read()
+    if (responseData.success && responseData.data) {
+      // 根据你的响应结构，文本在 data.replyText，音频URL在 data.replyAudioUrl
+      responseText = responseData.data.replyText || ''
+      responseAudioUrl = responseData.data.replyAudioUrl || null
+    }
 
-        if (done) {
-          break
-        }
-
-        // 解码数据块
-        const chunk = decoder.decode(value, {stream: true})
-        buffer += chunk
-        // 处理每一行数据
-        let lines = buffer.split('\n')
-        buffer = lines.pop() || '' // 保留最后不完整的行
-
-        for (let line of lines) {
-          line = line.trim()
-          if (!line) continue
-
-          try {
-            // 直接尝试解析JSON
-            const jsonData = JSON.parse(line)
-            if (jsonData && jsonData.v !== undefined) {
-              responseText += jsonData.v
-
-              // 实时更新UI
-              const lastIndex = chatList.value.length - 1
-              if (lastIndex >= 0) {
-                chatList.value[lastIndex] = {
-                  ...chatList.value[lastIndex],
-                  content: responseText
-                }
-                // 强制Vue更新
-                nextTick(() => {
-                  scrollToBottom()
-                })
-              }
-            }
-          } catch (e) {
-            // 尝试SSE格式：data: {...} 或 data:{...}
-            if (line.startsWith('data:')) {
-              let dataStr = ''
-              if (line.startsWith('data: ')) {
-                dataStr = line.substring(6).trim()
-              } else if (line.startsWith('data:')) {
-                dataStr = line.substring(5).trim()
-              }
-
-              if (dataStr && dataStr !== '[DONE]') {
-                try {
-                  const jsonData = JSON.parse(dataStr)
-                  if (jsonData && jsonData.v !== undefined) {
-                    responseText += jsonData.v
-
-                    // 实时更新UI
-                    const lastIndex = chatList.value.length - 1
-                    if (lastIndex >= 0) {
-                      chatList.value[lastIndex] = {
-                        ...chatList.value[lastIndex],
-                        content: responseText
-                      }
-                      // 强制Vue更新
-                      nextTick(() => {
-                        scrollToBottom()
-                      })
-                    }
-                  }
-                } catch (sseError) {
-                  // SSE解析失败，跳过
-                }
-              }
-            }
-          }
-        }
+    // 直接更新AI回复消息（不需要流式处理）
+    const lastIndex = chatList.value.length - 1
+    if (lastIndex >= 0 && chatList.value[lastIndex].role === 'assistant') {
+      chatList.value[lastIndex] = {
+        ...chatList.value[lastIndex],
+        content: responseText,
+        audioUrl: responseAudioUrl
       }
-
-      // 处理最后的缓冲区
-      if (buffer.trim()) {
-        try {
-          const jsonData = JSON.parse(buffer.trim())
-          if (jsonData && jsonData.v !== undefined) {
-            responseText += jsonData.v
-            const lastIndex = chatList.value.length - 1
-            if (lastIndex >= 0) {
-              chatList.value[lastIndex] = {
-                ...chatList.value[lastIndex],
-                content: responseText
-              }
-              nextTick(() => {
-                scrollToBottom()
-              })
-            }
-          }
-        } catch (e) {
-          // 最后缓冲区解析失败，跳过
-        }
-      }
-
-    } catch (error) {
-      console.error('读取流数据错误:', error)
-      chatList.value[chatList.value.length - 1].content = '抱歉，请求出错了，请稍后重试。'
-    } finally {
-      reader.releaseLock()
+      nextTick(() => {
+        scrollToBottom()
+      })
     }
 
     // 通知父组件AI回复完成
-    if (responseText) {
-      emit('new-message', {role: 'assistant', content: responseText})
+    if (responseText || responseAudioUrl) {
+      emit('new-message', {
+        role: 'assistant',
+        content: responseText,
+        audioUrl: responseAudioUrl
+      })
     }
 
   } catch (error) {
     console.error('发送消息错误:', error)
-    chatList.value[chatList.value.length - 1].content = '抱歉，请求出错了，请稍后重试。'
+    const lastIndex = chatList.value.length - 1
+    if (lastIndex >= 0 && chatList.value[lastIndex].role === 'assistant') {
+      chatList.value[lastIndex].content = '抱歉，请求出错了，请稍后重试。'
+    }
   } finally {
     isLoading.value = false
     isStreaming.value = false
-    streamReader = null
   }
 }
 
