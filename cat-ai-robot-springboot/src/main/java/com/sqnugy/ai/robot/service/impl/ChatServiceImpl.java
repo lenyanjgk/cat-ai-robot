@@ -59,8 +59,6 @@ public class ChatServiceImpl implements ChatService {
         // 用户选定角色
         Long roleId = newChatReqVO.getRoleId();
 
-        RoleDO roleDO = roleMapper.selectById(roleId);
-
         String uuid = UUID.randomUUID().toString();
         String summary = StringUtil.truncate(newChatReqVO.getMessage(), 20);
 

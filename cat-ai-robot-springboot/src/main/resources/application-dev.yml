@@ -1,4 +1,8 @@
 spring:
+  servlet:
+    multipart:
+      max-file-size: 2MB     # 单个文件大小
+      max-request-size: 10MB # 单次请求大小
   datasource:
     #    driver-class-name: org.postgresql.Driver # 数据库驱动类名
     #    url: jdbc:postgresql://localhost:5432/robot # 数据库连接 URL

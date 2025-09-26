@@ -26,6 +26,8 @@ public class RoleDO {
     @TableId(type = IdType.AUTO)
     private Long id;
 
+    private String avatarUrl;
+
     private String name;
 
     private String introduction;
