@@ -9,8 +9,7 @@ CREATE TABLE "public"."t_chat" (
                                    "create_time" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
                                    "update_time" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
                                    "role_id" int8
-)
-;
+);
 COMMENT ON COLUMN "public"."t_chat"."id" IS '主键ID，自增唯一标识';
 COMMENT ON COLUMN "public"."t_chat"."uuid" IS '对话UUID，全局唯一标识';
 COMMENT ON COLUMN "public"."t_chat"."summary" IS '对话摘要（最大长度60字符）';
@@ -44,14 +43,15 @@ CREATE TABLE "public"."t_chat_message" (
                                            "chat_uuid" varchar(60) COLLATE "pg_catalog"."default" NOT NULL,
                                            "content" text COLLATE "pg_catalog"."default" NOT NULL,
                                            "role" varchar(12) COLLATE "pg_catalog"."default",
-                                           "create_time" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP
-)
-;
+                                           "create_time" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                           "audio_url" varchar COLLATE "pg_catalog"."default"
+);
 COMMENT ON COLUMN "public"."t_chat_message"."id" IS '主键ID，自增唯一标识';
 COMMENT ON COLUMN "public"."t_chat_message"."chat_uuid" IS '关联的对话UUID，与t_chat表的uuid字段关联';
 COMMENT ON COLUMN "public"."t_chat_message"."content" IS '消息内容';
 COMMENT ON COLUMN "public"."t_chat_message"."role" IS '消息发送者角色（如：user-用户，assistant-助手）';
 COMMENT ON COLUMN "public"."t_chat_message"."create_time" IS '消息创建时间（默认当前时间）';
+COMMENT ON COLUMN "public"."t_chat_message"."audio_url" IS '音频地址';
 COMMENT ON TABLE "public"."t_chat_message" IS '聊天消息记录表';
 
 -- ----------------------------
@@ -63,7 +63,6 @@ CREATE INDEX "idx_chat_message_create_time" ON "public"."t_chat_message" USING b
 CREATE INDEX "idx_chat_message_uuid" ON "public"."t_chat_message" USING btree (
     "chat_uuid" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
     );
-
 
 
 -- ----------------------------
@@ -81,9 +80,9 @@ CREATE TABLE "public"."t_role" (
                                    "speech_rate" float4 DEFAULT 1.0,
                                    "pitch_rate" float4 DEFAULT 1.0,
                                    "create_time" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                                   "update_time" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP
-)
-;
+                                   "update_time" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                   "avatar_url" varchar COLLATE "pg_catalog"."default"
+);
 COMMENT ON COLUMN "public"."t_role"."system_prompt" IS '角色人设的系统提示';
 COMMENT ON TABLE "public"."t_role" IS 'AI角色表';
 
