@@ -18,6 +18,7 @@ import com.sqnugy.ai.robot.service.ChatService;
 import com.sqnugy.ai.robot.utils.PageResponse;
 import com.sqnugy.ai.robot.utils.Response;
 import com.sqnugy.ai.robot.utils.StringUtil;
+import io.micrometer.common.util.StringUtils;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -57,11 +58,16 @@ public class ChatServiceImpl implements ChatService {
      */
     @Override
     public Response<NewChatRspVO> newChat(NewChatReqVO newChatReqVO) {
+
+        if (StringUtils.isBlank(newChatReqVO.getAudioFileUrl()) && StringUtils.isBlank(newChatReqVO.getMessage())) {
+            throw new BizException(ResponseCodeEnum.PARAM_NOT_VALID, "音频文件地址或消息不能同时为空");
+        }
+
         // 用户选定角色
         Long roleId = newChatReqVO.getRoleId();
 
         String uuid = UUID.randomUUID().toString();
-        String summary = StringUtil.truncate(newChatReqVO.getMessage(), 20);
+        String summary = StringUtils.isBlank(newChatReqVO.getMessage()) ? "语音对话" : StringUtil.truncate(newChatReqVO.getMessage(), 20);
 
         // 新建会话时存储角色信息
         chatMapper.insert(ChatDO.builder()

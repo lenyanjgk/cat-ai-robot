@@ -18,7 +18,8 @@ public class NewChatReqVO {
     @NotNull(message = "角色ID不能为空")
     private Long roleId;
 
-    @NotBlank(message = "用户消息不能为空")
+    private String audioFileUrl;
+
     private String message;
 
 }
