@@ -72,7 +72,10 @@
             <tbody>
             <tr v-for="role in filteredRoles" :key="role.id" class="table-row">
               <td class="col-avatar">
-                <div class="role-avatar" :style="{ backgroundColor: getAvatarColor(role.voiceCode) }">
+                <div class="role-avatar" v-if="role.avatarUrl">
+                  <img :src="role.avatarUrl" :alt="role.name" class="avatar-image" />
+                </div>
+                <div v-else class="role-avatar" :style="{ backgroundColor: getAvatarColor(role.voiceCode) }">
                   <span class="avatar-text">{{ role.name?.charAt(0) || '角' }}</span>
                 </div>
               </td>
@@ -161,6 +164,41 @@
         @cancel="closeModal"
     >
       <div class="role-form">
+        <!-- 头像上传区域 -->
+        <div class="form-group">
+          <label class="form-label">角色头像</label>
+          <div class="avatar-upload-section">
+            <div class="avatar-preview">
+              <div v-if="roleForm.avatarUrl" class="preview-image">
+                <img :src="roleForm.avatarUrl" :alt="roleForm.name" class="avatar-preview-img" />
+                <div class="avatar-actions">
+                  <button @click="removeAvatar" class="btn-remove" type="button" title="删除头像">
+                    <DeleteOutlined />
+                  </button>
+                </div>
+              </div>
+              <div v-else class="default-avatar" :style="{ backgroundColor: getAvatarColor(roleForm.voiceCode) }">
+                <span class="avatar-text">{{ roleForm.name?.charAt(0) || '角' }}</span>
+              </div>
+            </div>
+            <div class="upload-controls">
+              <input
+                  ref="fileInput"
+                  type="file"
+                  accept="image/*"
+                  @change="handleFileSelect"
+                  class="file-input"
+                  style="display: none"
+              />
+              <button @click="triggerFileSelect" class="btn-upload" type="button">
+                <PlusOutlined />
+                选择头像
+              </button>
+              <p class="upload-tip">支持 JPG、PNG 格式，建议尺寸 200x200px</p>
+            </div>
+          </div>
+        </div>
+
         <div class="form-group">
           <label class="form-label">角色名称 *</label>
           <input
@@ -282,6 +320,7 @@ import {
   UserOutlined
 } from '@ant-design/icons-vue'
 import {createRole, deleteRole as deleteRoleApi, getRoles, updateRole} from '@/api/role'
+import {uploadFile} from '@/api/chat'
 
 // 响应式数据
 const loading = ref(false)
@@ -291,6 +330,8 @@ const showCreateModal = ref(false)
 const showDeleteModal = ref(false)
 const editingRole = ref(null)
 const deletingRole = ref(null)
+const uploading = ref(false)
+const fileInput = ref(null)
 
 // 分页数据
 const pagination = reactive({
@@ -303,6 +344,7 @@ const pagination = reactive({
 const roleForm = reactive({
   name: '',
   introduction: '',
+  avatarUrl: '',
   voiceCode: '',
   voiceModelName: '',
   language: '',
@@ -354,6 +396,7 @@ const editRole = (role) => {
   Object.assign(roleForm, {
     name: role.name || '',
     introduction: role.introduction || '',
+    avatarUrl: role.avatarUrl || '',
     voiceCode: role.voiceCode || '',
     voiceModelName: role.voiceModelName || '',
     language: role.language || '',
@@ -417,12 +460,60 @@ const saveRole = async () => {
   }
 }
 
+// 头像上传相关方法
+const triggerFileSelect = () => {
+  fileInput.value?.click()
+}
+
+const handleFileSelect = async (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+
+  // 验证文件类型
+  if (!file.type.startsWith('image/')) {
+    message.error('请选择图片文件')
+    return
+  }
+
+  // 验证文件大小（限制为5MB）
+  if (file.size > 5 * 1024 * 1024) {
+    message.error('图片大小不能超过5MB')
+    return
+  }
+
+  try {
+    uploading.value = true
+    const response = await uploadFile(file)
+    if (response.success) {
+      roleForm.avatarUrl = response.data.url
+      message.success('头像上传成功')
+    } else {
+      message.error(response.message || '头像上传失败')
+    }
+  } catch (error) {
+    console.error('头像上传失败:', error)
+    message.error('头像上传失败')
+  } finally {
+    uploading.value = false
+    // 清空文件输入框
+    if (fileInput.value) {
+      fileInput.value.value = ''
+    }
+  }
+}
+
+const removeAvatar = () => {
+  roleForm.avatarUrl = ''
+  message.success('头像已删除')
+}
+
 const closeModal = () => {
   showCreateModal.value = false
   editingRole.value = null
   Object.assign(roleForm, {
     name: '',
     introduction: '',
+    avatarUrl: '',
     voiceCode: '',
     voiceModelName: '',
     language: '',
@@ -727,10 +818,119 @@ defineExpose({
   color: white;
   font-weight: 600;
   font-size: 16px;
+  overflow: hidden;
+}
+
+.avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
 }
 
 .avatar-text {
   color: white;
+}
+
+/* 头像上传区域 */
+.avatar-upload-section {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.avatar-preview {
+  position: relative;
+}
+
+.preview-image {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid #e2e8f0;
+}
+
+.avatar-preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-actions {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+}
+
+.btn-remove {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #ef4444;
+  color: white;
+  border: 2px solid white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.btn-remove:hover {
+  background: #dc2626;
+  transform: scale(1.1);
+}
+
+.default-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 28px;
+  border: 3px solid #e2e8f0;
+}
+
+.upload-controls {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.btn-upload {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #f1f5f9;
+  color: #475569;
+  border: 2px dashed #cbd5e1;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: fit-content;
+}
+
+.btn-upload:hover {
+  background: #e2e8f0;
+  border-color: #94a3b8;
+  color: #334155;
+}
+
+.upload-tip {
+  font-size: 12px;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.4;
 }
 
 /* 角色信息 */

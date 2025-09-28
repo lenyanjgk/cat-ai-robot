@@ -51,7 +51,7 @@
 
           <!-- 对话列表 -->
           <div v-for="(historyChat, index) in historyChats" :key="historyChat.id || index"
-               class="relative px-3 py-1 rounded-xl hover:bg-[rgb(239,246,255)] cursor-pointer transition-colors flex items-center justify-between"
+               class="relative px-3 py-2 rounded-xl hover:bg-[rgb(239,246,255)] cursor-pointer transition-colors flex items-start justify-between min-h-[56px]"
                :class="{ 'bg-blue-50 border border-blue-200': currentChatId === historyChat.uuid }"
                @click="selectChat(historyChat)"
                @mouseenter="showButton = historyChat.uuid"
@@ -59,21 +59,38 @@
 
             <!-- 重命名输入框 -->
             <div v-if="renamingChatId === historyChat.id" class="flex-1 mr-2" @click.stop>
-              <input
-                  v-model="newChatTitle"
-                  @keydown.enter="confirmRename"
-                  @keydown.esc="cancelRename"
-                  @blur="confirmRename"
-                  class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:border-blue-500"
-                  autofocus
-              />
+              <div class="space-y-1">
+                <!-- 角色名（不可编辑） -->
+                <div class="text-xs text-blue-600 font-medium overflow-hidden whitespace-nowrap"
+                     :title="historyChat.roleName">
+                  {{ historyChat.roleName }}
+                </div>
+                <!-- 摘要输入框（可编辑） -->
+                <input
+                    v-model="newChatTitle"
+                    @keydown.enter="handleEnterKey"
+                    @keydown.esc="cancelRename"
+                    @blur="handleBlur"
+                    class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                    placeholder="请输入对话摘要"
+                    autofocus
+                />
+              </div>
             </div>
 
-            <!-- 对话标题 -->
-            <p v-else class="text-[14px] text-gray-800 overflow-hidden whitespace-nowrap flex-1"
-               :title="historyChat.summary">
-              {{ historyChat.summary }}
-            </p>
+            <!-- 对话显示 -->
+            <div v-else class="flex-1 overflow-hidden">
+              <!-- 角色名 -->
+              <div class="text-xs text-blue-600 font-medium overflow-hidden whitespace-nowrap mb-1"
+                   :title="historyChat.roleName">
+                {{ historyChat.roleName }}
+              </div>
+              <!-- 对话摘要 -->
+              <div class="text-[14px] text-gray-800 overflow-hidden whitespace-nowrap"
+                   :title="historyChat.summary">
+                {{ historyChat.summary || '新对话' }}
+              </div>
+            </div>
 
             <!-- 下拉菜单 -->
             <a-dropdown v-if="renamingChatId !== historyChat.id" trigger="click">
@@ -93,7 +110,7 @@
               <button
                   @click.stop
                   class="z-10 rounded-lg outline-none justify-center items-center bg-white
-                            w-6 h-6 flex absolute right-2 top-1/2 transform -translate-y-1/2 transition-all duration-300 hover:bg-gray-50"
+                            w-6 h-6 flex absolute right-2 top-2 transition-all duration-300 hover:bg-gray-50"
                   :style="{ opacity: showButton === historyChat.uuid ? 1 : 0 }">
                 <EllipsisOutlined class="w-4 h-4 text-gray-500"/>
               </button>
@@ -218,13 +235,32 @@ const startRename = (chat) => {
 
 // 确认重命名
 const confirmRename = async () => {
+  // 防止重复调用
+  if (isRenaming.value === false) {
+    return
+  }
+
   try {
-    const response = await renameChat(renamingChatId.value, newChatTitle.value)
+    // 找到当前重命名的聊天对象
+    const currentChat = historyChats.value.find(c => c.id === renamingChatId.value)
+    if (!currentChat) {
+      message.error('找不到对话')
+      cancelRename()
+      return
+    }
+
+    // 检查摘要是否为空
+    if (!newChatTitle.value.trim()) {
+      message.error('对话摘要不能为空')
+      return
+    }
+
+    const response = await renameChat(currentChat.uuid, newChatTitle.value.trim())
     if (response.success) {
       // 更新本地数据
       const chatIndex = historyChats.value.findIndex(c => c.id === renamingChatId.value)
       if (chatIndex !== -1) {
-        historyChats.value[chatIndex].summary = newChatTitle.value
+        historyChats.value[chatIndex].summary = newChatTitle.value.trim()
       }
       message.success('重命名成功')
     } else {
@@ -236,6 +272,22 @@ const confirmRename = async () => {
   } finally {
     cancelRename()
   }
+}
+
+// 处理回车键
+const handleEnterKey = (event) => {
+  event.preventDefault()
+  confirmRename()
+}
+
+// 处理失焦事件
+const handleBlur = () => {
+  // 延迟一点点执行，防止与Enter键冲突
+  setTimeout(() => {
+    if (isRenaming.value) {
+      confirmRename()
+    }
+  }, 100)
 }
 
 // 取消重命名

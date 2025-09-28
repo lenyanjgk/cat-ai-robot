@@ -121,8 +121,8 @@ const handleNewChat = async () => {
 // 创建新对话的专用函数
 const handleCreateNewChat = async (messageData, roleId) => {
   try {
-    console.log('创建新对话，消息:', messageData.content, '角色ID:', roleId)
-    const response = await newChat(messageData.content, roleId)
+    console.log('创建新对话，消息:', messageData.content, '角色ID:', roleId, '语音URL:', messageData.audioUrl)
+    const response = await newChat(messageData.content, roleId, messageData.audioUrl)
     if (response.success) {
       currentChatId.value = response.data.uuid
       console.log('对话创建成功，ID:', currentChatId.value)

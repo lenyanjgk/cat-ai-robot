@@ -8,13 +8,20 @@ import { BASE_URL, DEFAULT_HEADERS, STREAM_HEADERS } from '@/config/api.js'
  * 新建对话
  * @param {string} message - 用户消息
  * @param {number} roleId - 角色ID
+ * @param {string} audioFileUrl - 语音文件URL（可选）
  * @returns {Promise}
  */
-export const newChat = async (message, roleId) => {
+export const newChat = async (message, roleId, audioFileUrl = null) => {
+    const requestBody = {message, roleId}
+    
+    if (audioFileUrl) {
+        requestBody.audioFileUrl = audioFileUrl
+    }
+    
     const response = await fetch(`${BASE_URL}/chat/new`, {
         method: 'POST',
         headers: DEFAULT_HEADERS,
-        body: JSON.stringify({message, roleId})
+        body: JSON.stringify(requestBody)
     })
 
     if (!response.ok) {
@@ -67,15 +74,15 @@ export const getChatMessages = async (chatId, current = 1, size = 50) => {
 
 /**
  * 重命名对话
- * @param {number} id - 对话ID
+ * @param {string} uuid - 对话UUID
  * @param {string} summary - 新的摘要
  * @returns {Promise}
  */
-export const renameChat = async (id, summary) => {
+export const renameChat = async (uuid, summary) => {
     const response = await fetch(`${BASE_URL}/chat/summary/rename`, {
         method: 'POST',
         headers: DEFAULT_HEADERS,
-        body: JSON.stringify({id, summary})
+        body: JSON.stringify({uuid, summary})
     })
 
     if (!response.ok) {
@@ -157,6 +164,27 @@ export const getChatRoleInfo = async (chatId) => {
     const response = await fetch(`${BASE_URL}/chat/role/info?chatId=${chatId}`, {
         method: 'POST',
         headers: DEFAULT_HEADERS
+    })
+
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    return await response.json()
+}
+
+/**
+ * 上传文件
+ * @param {File} file - 要上传的文件
+ * @returns {Promise} 返回包含文件URL的响应
+ */
+export const uploadFile = async (file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const response = await fetch(`${BASE_URL}/file/upload`, {
+        method: 'POST',
+        body: formData
     })
 
     if (!response.ok) {

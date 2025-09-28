@@ -35,14 +35,8 @@
           >
             <div class="flex items-start justify-between">
               <div class="flex-1">
-                <!-- 角色头像和基本信息 -->
+                <!-- 角色基本信息 -->
                 <div class="flex items-center" style="margin-bottom: 0.5rem;">
-                  <div
-                      class="role-avatar w-10 h-10 rounded-full flex items-center justify-center border border-gray-300"
-                      style="margin-right: 0.75rem;"
-                      :style="{ backgroundColor: getAvatarColor(role.voiceCode) }">
-                    <span class="text-white font-medium">{{ role.name?.charAt(0) || '角' }}</span>
-                  </div>
                   <div>
                     <h3 class="font-medium text-gray-800 text-base">{{ role.name }}</h3>
                     <p class="text-xs text-gray-500" style="margin-top: 0.25rem;">{{ role.voiceCode || 'default' }}</p>
@@ -60,16 +54,24 @@
                   <span v-if="role.voiceModelName" class="tag">{{ role.voiceModelName }}</span>
                 </div>
               </div>
-              <div class="w-15 h-15 rounded-full flex items-center justify-center border border-gray-200">
-                <SvgIcon name="girl" customCss="w-20 h-20"></SvgIcon>
+              
+              <!-- 角色头像 -->
+              <div class="flex items-center" style="gap: 0.75rem;">
+                <div class="w-15 h-15 rounded-full flex items-center justify-center border border-gray-200 overflow-hidden">
+                  <img 
+                    v-if="role.avatarUrl" 
+                    :src="role.avatarUrl" 
+                    :alt="role.name"
+                    class="w-full h-full object-cover rounded-full"
+                  />
+                  <SvgIcon v-else name="girl" customCss="w-20 h-20"></SvgIcon>
+                </div>
+
+                <!-- 选择状态 -->
+                <div v-if="selectedRole?.id === role.id">
+                  <CheckCircleFilled class="text-blue-500 text-lg"/>
+                </div>
               </div>
-
-              <!-- 选择状态 -->
-              <div v-if="selectedRole?.id === role.id" style="margin-left: 0.75rem;">
-                <CheckCircleFilled class="text-blue-500 text-lg"/>
-              </div>
-
-
             </div>
           </div>
         </div>
@@ -208,15 +210,6 @@ const selectRole = (role) => {
   selectedRole.value = role
 }
 
-// 生成头像颜色
-const getAvatarColor = (voiceCode) => {
-  const colors = [
-    '#1890ff', '#52c41a', '#faad14', '#f5222d',
-    '#722ed1', '#13c2c2', '#eb2f96', '#fa8c16'
-  ]
-  const index = voiceCode ? voiceCode.charCodeAt(0) % colors.length : 0
-  return colors[index]
-}
 
 // 确认选择
 const handleConfirm = () => {

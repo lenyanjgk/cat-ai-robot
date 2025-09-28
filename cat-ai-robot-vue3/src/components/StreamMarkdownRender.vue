@@ -157,6 +157,9 @@ watch(() => props.content, (newVal) => {
   width: 100%;
   line-height: 24px;
   color: rgb(64 64 64);
+  word-wrap: break-word;
+  word-break: break-word;
+  white-space: normal;
 }
 
 /* 第一个 p 标签的上边距设置为0 */
