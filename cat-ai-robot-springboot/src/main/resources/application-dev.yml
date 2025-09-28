@@ -8,8 +8,8 @@ spring:
     #    url: jdbc:postgresql://localhost:5432/robot # 数据库连接 URL
     driver-class-name: com.p6spy.engine.spy.P6SpyDriver # 数据库驱动类名
     url: jdbc:p6spy:postgresql://43.139.205.93:15432/robot # 数据库连接 URL
-    username: postgres # 数据库用户名
-    password: catairobot # 数据库密码
+    username: ...... # 数据库用户名
+    password: ...... # 数据库密码
     hikari: # HikariCP 连接池配置
       pool-name: AI-Robot-HikariCP # 自定义连接池名称
       auto-commit: true # 是否自动提交事务
@@ -50,25 +50,25 @@ spring:
     #          temperature: 0.7 # 温度值
     openai:
       base-url: https://dashscope.aliyuncs.com/compatible-mode # OpenAI 服务的访问地址，这里使用的是阿里云百炼
-      api-key: sk-3ba280e44d184f83a1210d36108db6f8  # 填写阿里百炼 API Key, 改成你自己的
-#      chat:
-#        options:
-#          model: qwen-turbo # 模型名称 qwen-omni-turbo
-#          temperature: 0.7 # 温度值
-#    mcp:
-#      client:
-#        stdio:
-#          servers-configuration: classpath:/mcp-servers-config.json # 指定 MCP 服务的配置文件路径
-#        toolcallback:
-#          enabled: true # 开启 MCP 客户端的工具回调（Tool Callback）功能
-#    mcp:
-#      client:
-#        type: sync # 客户端使用同步通信模式
-#        request-timeout: 20s # 设置单次请求超时时间
-#        sse: # SSE (Server-Sent Events) 流式响应配置
-#          connections: # 定义 SSE 连接端点
-#            qq-mcp-server: # 自定义连接名称（可任意命名）
-#              url: http://localhost:8000 # MCP 服务实际地址
+      api-key:  ...... # 填写阿里百炼 API Key, 改成你自己的
+    #      chat:
+    #        options:
+    #          model: qwen-turbo # 模型名称 qwen-omni-turbo
+    #          temperature: 0.7 # 温度值
+    #    mcp:
+    #      client:
+    #        stdio:
+    #          servers-configuration: classpath:/mcp-servers-config.json # 指定 MCP 服务的配置文件路径
+    #        toolcallback:
+    #          enabled: true # 开启 MCP 客户端的工具回调（Tool Callback）功能
+    #    mcp:
+    #      client:
+    #        type: sync # 客户端使用同步通信模式
+    #        request-timeout: 20s # 设置单次请求超时时间
+    #        sse: # SSE (Server-Sent Events) 流式响应配置
+    #          connections: # 定义 SSE 连接端点
+    #            qq-mcp-server: # 自定义连接名称（可任意命名）
+    #              url: http://localhost:8000 # MCP 服务实际地址
 
 okhttp: # OkHttp 客户端配置
   connect-timeout: 5000    # 建立连接的最大等待时间（毫秒）
@@ -86,7 +86,7 @@ searxng: # SearXNG 搜索引擎配置
 #=================================================================
 minio:
   endpoint: http://43.139.205.93:19000
-  accessKey: catairobot
-  secretKey: catairobot
+  accessKey: ......
+  secretKey: ......
   bucketName: cat-ai-robot
 
