@@ -60,7 +60,7 @@
                 <div class="w-15 h-15 rounded-full flex items-center justify-center border border-gray-200 overflow-hidden">
                   <img 
                     v-if="role.avatarUrl" 
-                    :src="role.avatarUrl" 
+                    :src="convertMinioUrl(role.avatarUrl)" 
                     :alt="role.name"
                     class="w-full h-full object-cover rounded-full"
                   />
@@ -118,6 +118,7 @@ import {message} from 'ant-design-vue'
 import {CheckCircleFilled, SearchOutlined, UserOutlined} from '@ant-design/icons-vue'
 import {getRoles} from '@/api/role.js'
 import SvgIcon from "@/components/SvgIcon.vue";
+import {convertMinioUrl} from '@/api/chat.js'
 
 // Props
 const props = defineProps({

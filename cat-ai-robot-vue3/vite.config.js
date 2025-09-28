@@ -23,20 +23,9 @@ export default defineConfig({
             ],
         }),
         createSvgIconsPlugin({
-            // 指定项目中存放 SVG 图标的目录路径（插件会扫描此目录下的所有 .svg 文件）
             iconDirs: [path.resolve(process.cwd(), 'src/assets/icons')],
-            // 定义生成的 <symbol> 元素的 id 属性的命名格式
             symbolId: 'icon-[dir]-[name]',
-
-            /**
-             * 自定义 SVG Sprite 的插入位置
-             * @default: body-last
-             */
             inject: 'body-last',
-            /**
-             * 自定义 dom id
-             * @default: __svg__icons__dom__
-             */
             customDomId: '__svg__icons__dom__',
         }),
     ],

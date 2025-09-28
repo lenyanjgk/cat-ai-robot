@@ -46,7 +46,7 @@
               <div class="avatar-container">
                 <img 
                   v-if="selectedRole.avatarUrl" 
-                  :src="selectedRole.avatarUrl" 
+                  :src="convertMinioUrl(selectedRole.avatarUrl)" 
                   :alt="selectedRole.name"
                   class="role-avatar-image"
                 />
@@ -88,7 +88,7 @@
         <div v-if="chat.role === 'user'" class="user-message-wrapper chat-bubble">
           <div class="quesiton-container">
             <div v-if="chat.audioUrl">
-              <audio controls :src="chat.audioUrl" class="audio-player"></audio>
+              <audio controls :src="convertAudioUrl(chat.audioUrl)" class="audio-player"></audio>
             </div>
             <p>{{ chat.content }}</p>
           </div>
@@ -103,7 +103,7 @@
             <div class="w-12 h-12 rounded-full flex items-center justify-center border border-gray-200 overflow-hidden">
               <img 
                 v-if="selectedRole && selectedRole.avatarUrl" 
-                :src="selectedRole.avatarUrl" 
+                :src="convertMinioUrl(selectedRole.avatarUrl)" 
                 :alt="selectedRole.name"
                 class="w-full h-full object-cover rounded-full"
               />
@@ -113,7 +113,7 @@
 
           <div class="quesiton-container">
             <div v-if="chat.audioUrl">
-              <audio controls :src="chat.audioUrl" class="audio-player"></audio>
+              <audio controls :src="convertAudioUrl(chat.audioUrl)" class="audio-player"></audio>
             </div>
             <div class="assistant-message-container">
               <StreamMarkdownRender :content="chat.content"/>
@@ -316,6 +316,7 @@ import {MessageOutlined} from '@ant-design/icons-vue'
 import SvgIcon from '@/components/SvgIcon.vue'
 import StreamMarkdownRender from '@/components/StreamMarkdownRender.vue'
 import RoleSelector from '@/components/RoleSelector.vue'
+import {convertMinioUrl, convertAudioUrl} from '@/api/chat.js'
 
 // 接收父组件传递的当前对话ID和历史消息
 const props = defineProps({
@@ -355,11 +356,11 @@ const chatList = ref([])
 const chatSettings = ref({
   modelName: 'qwen-plus',
   temperature: 0.7,
-  networkSearch: false, // 固定为false，不再提供UI控制
-  roleId: null // 添加roleId字段
+  networkSearch: false,
+  roleId: null
 })
 /* -------- 语音聊天 -------- */
-const isRecording = ref(false)          // 是否正在录音
+const isRecording = ref(false)
 
 // 点击语音按钮的回调
 async function toggleVoice () {
@@ -370,14 +371,12 @@ async function toggleVoice () {
   }
 }
 
-// ① 开始录音（TODO：真正打开麦克风）
 let mediaRecorder = null
 let audioChunks = []
 
 async function startRecording () {
   console.log('[Voice] startRecording')
   
-  // 检查是否选择了角色
   if (!selectedRole.value) {
     notification.warning('请先选择AI角色后再进行语音聊天')
     showRoleSelector.value = true
@@ -409,7 +408,6 @@ async function startRecording () {
   }
 }
 
-// 停止录音（TODO：真正关闭麦克风并上传）
 async function stopRecording () {
   if (!mediaRecorder || mediaRecorder.state === 'inactive') return
   mediaRecorder.stop()   // 触发 onstop 回调
@@ -419,7 +417,7 @@ async function stopRecording () {
 async function uploadAudio (audioBlob) {
   const form = new FormData()
   form.append('file', audioBlob, 'voice.webm')
-  const res = await fetch('http://localhost:8081/file/upload', {
+  const res = await fetch('https://ip/api/file/upload', {
     method: 'POST',
     body: form
   })
@@ -453,14 +451,11 @@ const welcomeSuggestions = ref([
 const autoResize = () => {
   const textarea = textareaRef.value;
   if (textarea) {
-    // 重置高度以获取正确的滚动高度
     textarea.style.height = 'auto'
 
-    // 计算新高度，但最大不超过 300px
     const newHeight = Math.min(textarea.scrollHeight, 300);
     textarea.style.height = newHeight + 'px';
 
-    // 如果内容超出 300px，则启用滚动
     textarea.style.overflowY = textarea.scrollHeight > 300 ? 'auto' : 'hidden';
   }
 }
@@ -521,7 +516,7 @@ const sendVideoMessage = async (videoUrl) => {
   isStreaming.value = true
 
   try {
-    const response = await fetch('http://localhost:8081/chat/voice-chat', {
+    const response = await fetch('https://ip/api/chat/voice-chat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -550,12 +545,10 @@ const sendVideoMessage = async (videoUrl) => {
     let responseAudioUrl = null
 
     if (responseData.success && responseData.data) {
-      // 根据你的响应结构，文本在 data.replyText，音频URL在 data.replyAudioUrl
       responseText = responseData.data.replyText || ''
       responseAudioUrl = responseData.data.replyAudioUrl || null
     }
 
-    // 直接更新AI回复消息（不需要流式处理）
     const lastIndex = chatList.value.length - 1
     if (lastIndex >= 0 && chatList.value[lastIndex].role === 'assistant') {
       chatList.value[lastIndex] = {
@@ -631,7 +624,7 @@ const sendMessage = async () => {
 
   try {
     // 直接使用fetch处理SSE流
-    const response = await fetch('http://localhost:8081/chat/completion', {
+    const response = await fetch('https://ip/api/chat/completion', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -653,7 +646,6 @@ const sendMessage = async () => {
     }
 
 
-    // 获取ReadableStream
     const reader = response.body.getReader()
     const decoder = new TextDecoder()
 
@@ -673,7 +665,7 @@ const sendMessage = async () => {
         buffer += chunk
         // 处理每一行数据
         let lines = buffer.split('\n')
-        buffer = lines.pop() || '' // 保留最后不完整的行
+        buffer = lines.pop() || ''
 
         for (let line of lines) {
           line = line.trim()
@@ -699,7 +691,6 @@ const sendMessage = async () => {
               }
             }
           } catch (e) {
-            // 尝试SSE格式：data: {...} 或 data:{...}
             if (line.startsWith('data:')) {
               let dataStr = ''
               if (line.startsWith('data: ')) {
@@ -714,7 +705,6 @@ const sendMessage = async () => {
                   if (jsonData && jsonData.v !== undefined) {
                     responseText += jsonData.v
 
-                    // 实时更新UI
                     const lastIndex = chatList.value.length - 1
                     if (lastIndex >= 0) {
                       chatList.value[lastIndex] = {
@@ -782,9 +772,8 @@ const sendMessage = async () => {
 
 // 滚动到底部
 const scrollToBottom = async () => {
-  await nextTick() // 等待 Vue.js 完成 DOM 更新
-  if (chatContainer.value) { // 若容器存在
-    // 将容器的滚动条位置设置到最底部
+  await nextTick()
+  if (chatContainer.value) {
     const container = chatContainer.value;
     container.scrollTop = container.scrollHeight;
   }
@@ -837,9 +826,7 @@ watch(() => props.initialMessages, (newMessages) => {
       scrollToBottom()
     })
   } else {
-    // 如果没有消息，显示空的聊天列表并重置状态
     chatList.value = []
-    // 重置角色选择
     chatSettings.value.roleId = null
     selectedRole.value = null
   }
@@ -889,7 +876,7 @@ onMounted(() => {
   word-break: break-word;
   background-color: #eff6ff;
   border-radius: 14px;
-  max-width: calc(100% - 160px); /* 考虑左右固定间距 */
+  max-width: calc(100% - 160px);
   position: relative;
 }
 
@@ -898,35 +885,35 @@ onMounted(() => {
   display: flex;
   justify-content: flex-end;
   margin-bottom: 1rem;
-  margin-left: 80px; /* 桌面端固定左侧间距 */
+  margin-left: 80px;
 }
 
 /* AI助手消息容器样式 */
 .assistant-message-wrapper {
   display: flex;
   margin-bottom: 1rem;
-  margin-right: 80px; /* 桌面端固定右侧间距 */
+  margin-right: 80px;
   align-items: flex-start;
 }
 
 /* 移动端响应式间距 */
 @media (max-width: 768px) {
   .user-message-wrapper {
-    margin-left: 40px; /* 移动端减少左侧间距 */
+    margin-left: 40px;
   }
 
   .assistant-message-wrapper {
-    margin-right: 40px; /* 移动端减少右侧间距 */
+    margin-right: 40px;
   }
 }
 
 @media (max-width: 480px) {
   .user-message-wrapper {
-    margin-left: 20px; /* 小屏幕设备进一步减少间距 */
+    margin-left: 20px;
   }
 
   .assistant-message-wrapper {
-    margin-right: 20px; /* 小屏幕设备进一步减少间距 */
+    margin-right: 20px;
   }
 }
 
@@ -938,8 +925,8 @@ onMounted(() => {
 .assistant-message-container {
   flex: 1;
   padding: 8px 0;
-  min-width: 0; /* 允许内容收缩 */
-  max-width: none; /* 移除宽度限制，让内容自然换行 */
+  min-width: 0;
+  max-width: none;
 }
 
 
@@ -954,7 +941,7 @@ onMounted(() => {
 
 /* 聊天内容区域样式 */
 .overflow-y-auto {
-  scrollbar-color: rgba(0, 0, 0, 0.2) transparent; /* 自定义滚动条颜色 */
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
 }
 
 /* 欢迎界面样式 */

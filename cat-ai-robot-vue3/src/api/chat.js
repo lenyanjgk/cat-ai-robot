@@ -193,3 +193,27 @@ export const uploadFile = async (file) => {
 
     return await response.json()
 }
+
+// URL转换函数：将MinIO URL转换为代理URL
+export const convertMinioUrl = (url) => {
+    if (!url) return url;
+    
+    // 将MinIO URL转换为代理URL
+    if (url.includes('ip:19000')) {
+        return url.replace('http://ip:19000/', 'https://ip/resource/');
+    }
+    
+    return url;
+};
+
+// 音频URL转换函数：将MinIO音频URL转换为代理URL
+export const convertAudioUrl = (url) => {
+    if (!url) return url;
+    
+    // 将MinIO音频URL转换为代理URL
+    if (url.includes('ip:19000')) {
+        return url.replace('http://ip:19000/', 'https://ip/resource/');
+    }
+    
+    return url;
+};

@@ -73,7 +73,7 @@
             <tr v-for="role in filteredRoles" :key="role.id" class="table-row">
               <td class="col-avatar">
                 <div class="role-avatar" v-if="role.avatarUrl">
-                  <img :src="role.avatarUrl" :alt="role.name" class="avatar-image" />
+                  <img :src="convertMinioUrl(role.avatarUrl)" :alt="role.name" class="avatar-image" />
                 </div>
                 <div v-else class="role-avatar" :style="{ backgroundColor: getAvatarColor(role.voiceCode) }">
                   <span class="avatar-text">{{ role.name?.charAt(0) || '角' }}</span>
@@ -159,7 +159,7 @@
     <a-modal
         v-model:open="showCreateModal"
         :title="editingRole ? '编辑角色' : '新增角色'"
-        :width="600"
+        :width="800"
         :footer="null"
         @cancel="closeModal"
     >
@@ -170,7 +170,7 @@
           <div class="avatar-upload-section">
             <div class="avatar-preview">
               <div v-if="roleForm.avatarUrl" class="preview-image">
-                <img :src="roleForm.avatarUrl" :alt="roleForm.name" class="avatar-preview-img" />
+                <img :src="convertMinioUrl(roleForm.avatarUrl)" :alt="roleForm.name" class="avatar-preview-img" />
                 <div class="avatar-actions">
                   <button @click="removeAvatar" class="btn-remove" type="button" title="删除头像">
                     <DeleteOutlined />
@@ -194,7 +194,7 @@
                 <PlusOutlined />
                 选择头像
               </button>
-              <p class="upload-tip">支持 JPG、PNG 格式，建议尺寸 200x200px</p>
+              <p class="upload-tip">支持 SVG 格式，建议尺寸 200x200px</p>
             </div>
           </div>
         </div>
@@ -226,6 +226,7 @@
                 placeholder="请输入语音代码"
                 class="form-input"
             />
+            <a href="https://help.aliyun.com/zh/model-studio/cosyvoice-java-sdk?spm=a2c4g.11186623.help-menu-2400256.d_2_6_0_0.5f6a39a9gTKahi&scm=20140722.H_2868658._.OR_help-T_cn~zh-V_1#95303fd00f0ge" target="_blank" class="voice-help-link">阿里云语音试听</a>
           </div>
 
           <div class="form-group">
@@ -282,6 +283,16 @@
           </select>
         </div>
 
+        <div class="form-group">
+          <label class="form-label">系统提示词</label>
+          <textarea
+              v-model="roleForm.systemPrompt"
+              placeholder="请输入系统提示词，用于指导AI角色的行为和回答风格"
+              class="form-textarea"
+              rows="4"
+          ></textarea>
+        </div>
+
         <div class="form-actions">
           <button @click="closeModal" class="btn-cancel">取消</button>
           <button @click="saveRole" class="btn-save" :disabled="!roleForm.name">
@@ -320,7 +331,7 @@ import {
   UserOutlined
 } from '@ant-design/icons-vue'
 import {createRole, deleteRole as deleteRoleApi, getRoles, updateRole} from '@/api/role'
-import {uploadFile} from '@/api/chat'
+import {uploadFile, convertMinioUrl} from '@/api/chat'
 
 // 响应式数据
 const loading = ref(false)
@@ -349,7 +360,8 @@ const roleForm = reactive({
   voiceModelName: '',
   language: '',
   speechRate: 1.3,
-  pitchRate: 1.3
+  pitchRate: 1.3,
+  systemPrompt: ''
 })
 
 // 计算属性 - 过滤后的角色列表
@@ -401,7 +413,8 @@ const editRole = (role) => {
     voiceModelName: role.voiceModelName || '',
     language: role.language || '',
     speechRate: role.speechRate || 1.3,
-    pitchRate: role.pitchRate || 1.3
+    pitchRate: role.pitchRate || 1.3,
+    systemPrompt: role.systemPrompt || ''
   })
   showCreateModal.value = true
 }
@@ -518,7 +531,8 @@ const closeModal = () => {
     voiceModelName: '',
     language: '',
     speechRate: 1.3,
-    pitchRate: 1.3
+    pitchRate: 1.3,
+    systemPrompt: ''
   })
 }
 
@@ -931,6 +945,21 @@ defineExpose({
   color: #64748b;
   margin: 0;
   line-height: 1.4;
+}
+
+/* 语音代码试听链接 */
+.voice-help-link {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #3b82f6;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.voice-help-link:hover {
+  color: #2563eb;
+  text-decoration: underline;
 }
 
 /* 角色信息 */

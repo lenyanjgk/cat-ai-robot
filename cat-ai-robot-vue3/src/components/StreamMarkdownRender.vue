@@ -9,11 +9,10 @@
 import {nextTick, ref, watch} from 'vue'
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
-import 'highlight.js/styles/github.css' // 导入 GitHub 风格的高亮样式
+import 'highlight.js/styles/github.css'
 import markdownItHighlightJs from 'markdown-it-highlightjs'
 import {message} from 'ant-design-vue'
 
-// 定义一个 content 字段，用于父组件传入 markdown
 const props = defineProps({
   content: {
     type: String,
@@ -21,66 +20,53 @@ const props = defineProps({
   }
 })
 
-// 解析后的 HTML
 const renderedContent = ref('')
 
 // 初始化 MarkdownIt
 const md = new MarkdownIt({
-  html: true,        // 允许解析 HTML 标签
-  xhtmlOut: true,    // 输出符合 XHTML 规范的标签（如 <br /> 而不是 <br>）
-  linkify: true,     // 自动将文本中的 URL 转换为可点击的链接
-  typographer: true, // 启用排版优化
-  breaks: true,       // 将单个换行符 (\n) 转换为 <br>
-  langPrefix: 'language-', // 代码块的语言类名前缀（默认 'language-'）。例如 ```js 会生成 <pre><code class="language-js">
+  html: true,
+  xhtmlOut: true,
+  linkify: true,
+  typographer: true,
+  breaks: true,
+  langPrefix: 'language-',
 })
 
 // 使用代码高亮插件
 md.use(markdownItHighlightJs, {
   hljs,
-  auto: true, // 自动检测语言
-  code: true  // 高亮内联代码
+  auto: true,
+  code: true
 })
 
 // 保存默认的代码块渲染规则
 const defaultRender = md.renderer.rules.fence || function (tokens, idx, options, env, renderer) {
-  // 调用默认的渲染函数处理代码块
   return renderer.renderToken(tokens, idx, options)
 }
 
-// 重写 Markdown 渲染器的代码块渲染规则
+// 重写代码块渲染规则，添加复制功能
 md.renderer.rules.fence = function (tokens, idx, options, env, renderer) {
-  // 获取当前索引对应的 token（代码块）
   const token = tokens[idx]
-  // 处理语言信息：移除转义字符并去除首尾空格
   const info = token.info ? md.utils.unescapeAll(token.info).trim() : ''
   let langName = ''
 
-  // 如果存在语言信息
   if (info) {
-    // 分割信息字符串
-    const langCode = info.split(/\s+/g)[0] // 取第一个部分作为语言标识，如 ```js
-    langName = langCode.toLowerCase() // 转换为小写统一格式
+    const langCode = info.split(/\s+/g)[0]
+    langName = langCode.toLowerCase()
   }
 
-  // 使用默认渲染器生成代码块的 HTML 内容
   const originalContent = defaultRender(tokens, idx, options, env, renderer)
-
-  // 拼装最终的 HTML
   let finalContent = `<div class="code-block-wrapper">
       <div class="code-header">
       `
 
-  // 如果有返回代码块语言信息，需要显示
   if (langName) {
     finalContent += `<div class="code-language-label">${langName}</div>`
   }
 
-  // 代码块中的实际代码
   const codeContent = token.content
-  // 为每个代码块分配一个唯一标识，方便知道复制的哪个代码块中的内容
   const codeId = `code-${Math.random().toString(36).substr(2, 9)}`
 
-  // 返回渲染结果
   return finalContent += `
         <button class="copy-code-btn" onclick="copyCode('${codeId}')">  
           <svg t="1750068080826" class="copy-icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1529" 
@@ -96,35 +82,22 @@ md.renderer.rules.fence = function (tokens, idx, options, env, renderer) {
 
 // 初始化复制功能
 const setupCopyFunction = () => {
-  // 确保全局复制函数只定义一次
   if (!window.copyCode) {
-    // 定义全局复制函数
     window.copyCode = async (codeId) => {
       try {
-        // 1. 获取目标代码元素
         const codeElement = document.getElementById(codeId)
-        if (!codeElement) return // 元素不存在则退出
+        if (!codeElement) return
 
-        // 2. 获取待复制的代码内容
-        // 从元素的 data-code 属性获取 URL 编码的代码内容并解码
         const codeContent = decodeURIComponent(codeElement.getAttribute('data-code'))
-
-        // 3. 写入剪贴板
         await navigator.clipboard.writeText(codeContent)
 
-        // 显示复制成功反馈
         const btn = codeElement.parentElement.querySelector('.copy-code-btn')
         if (btn) {
-          // 保存原始图标 SVG
           const originalIcon = btn.querySelector('.copy-icon').innerHTML
-
-          // 替换为对号图标
           btn.querySelector('.copy-icon').innerHTML = `<path d="M912 190h-69.9c-9.8 0-19.1 4.5-25.1 12.2L404.7 724.5 207 474c-6.1-7.7-15.3-12.2-25.1-12.2H112c-6.7 0-10.4 7.7-6.3 12.9L357.1 864c12.6 16.1 35.5 16.1 48.1 0L918.3 202.9c4.1-5.2 0.4-12.9-6.3-12.9z" p-id="4582"></path>`
-          // 添加复制成功状态类
           btn.classList.add('copied')
           message.success('复制成功')
 
-          // 1秒后恢复原始图标
           setTimeout(() => {
             btn.querySelector('.copy-icon').innerHTML = originalIcon
             btn.classList.remove('copied')
@@ -137,14 +110,12 @@ const setupCopyFunction = () => {
   }
 }
 
-// 监听 content 字段，流式更新处理
+// 监听内容变化，实时渲染
 watch(() => props.content, (newVal) => {
   if (newVal) {
-    // 渲染为 HTML
     const html = md.render(newVal)
     renderedContent.value = html
 
-    // 确保复制功能在DOM更新后可用
     nextTick(() => {
       setupCopyFunction()
     })
@@ -162,15 +133,13 @@ watch(() => props.content, (newVal) => {
   white-space: normal;
 }
 
-/* 第一个 p 标签的上边距设置为0 */
+/* 第一个段落上边距为0 */
 :deep(.markdown-container > p:first-child),
 :deep(p:first-child) {
   margin-top: 0;
 }
 
-/* Markdown 转换为 HTML 的样式 */
-
-/* 修复标题选择器 - 使用逗号分隔多个选择器 */
+/* 标题样式 */
 :deep(h1), :deep(h2), :deep(h3), :deep(h4), :deep(h5), :deep(h6) {
   font-weight: 600;
   margin: calc(1.143 * 16px) 0 calc(1.143 * 12px) 0;
@@ -221,7 +190,7 @@ watch(() => props.content, (newVal) => {
   line-height: 1.7;
 }
 
-/* 修复列表标记样式 */
+/* 列表标记样式 */
 :deep(ol li::marker) {
   line-height: calc(1.143 * 25px);
   color: rgb(139 139 139);
@@ -231,7 +200,7 @@ watch(() => props.content, (newVal) => {
   color: rgb(139 139 139);
 }
 
-/* 嵌套列表样式 */
+/* 嵌套列表 */
 :deep(ul ul) {
   list-style: circle;
   margin-top: 0.3em;
@@ -239,10 +208,10 @@ watch(() => props.content, (newVal) => {
 }
 
 :deep(ul ul ul) {
-  list-style: square; /* 三级列表使用方块 */
+  list-style: square;
 }
 
-/* 代码块包装器样式 */
+/* 代码块容器 */
 :deep(.code-block-wrapper) {
   margin: 1em 0;
   border-radius: 14px;
@@ -250,7 +219,7 @@ watch(() => props.content, (newVal) => {
   background-color: #f6f8fa;
 }
 
-/* 代码块头部样式 */
+/* 代码块头部 */
 :deep(.code-header) {
   display: flex;
   justify-content: space-between;
@@ -259,7 +228,7 @@ watch(() => props.content, (newVal) => {
   padding: 8px 12px;
 }
 
-/* 语言标签样式 */
+/* 语言标签 */
 :deep(.code-language-label) {
   color: rgb(82 82 82);
   margin-left: 8px;
@@ -267,13 +236,13 @@ watch(() => props.content, (newVal) => {
   line-height: 18px;
 }
 
-/* 代码高亮样式优化 */
+/* 代码高亮 */
 :deep(.hljs) {
   background: transparent !important;
   padding: 0 !important;
 }
 
-/* 复制按钮样式 */
+/* 复制按钮 */
 :deep(.copy-code-btn) {
   display: flex;
   align-items: center;
@@ -310,12 +279,12 @@ watch(() => props.content, (newVal) => {
   padding: 1em;
   border-radius: 5px;
   overflow-x: auto;
-  max-width: 100%; /* 确保不超过容器宽度 */
-  white-space: pre; /* 保持原始格式 */
-  word-wrap: normal; /* 不在单词内部换行 */
+  max-width: 100%;
+  white-space: pre;
+  word-wrap: normal;
 }
 
-/* 单独的 code 标签样式 - 不在 pre 内的code */
+/* 内联代码 */
 :deep(:not(pre) > code) {
   font-size: .875em;
   font-weight: 600;
@@ -325,7 +294,7 @@ watch(() => props.content, (newVal) => {
   margin: 0 .2rem;
 }
 
-/* pre 内的 code 标签样式 */
+/* 代码块内代码 */
 :deep(pre > code) {
   font-size: .875em;
   background-color: transparent;
@@ -377,7 +346,7 @@ watch(() => props.content, (newVal) => {
   border: none;
 }
 
-/* 确保相邻元素之间的间距一致且适当 */
+/* 元素间距调整 */
 :deep(h1 + p),
 :deep(h2 + p),
 :deep(h3 + p) {

@@ -6,7 +6,7 @@
 // 开发环境配置
 const config = {
   // API 基础地址 - 支持环境变量
-  BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081',
+  BASE_URL: import.meta.env.VITE_API_BASE_URL || 'https://ip/api',
   
   // 请求超时时间（毫秒）
   TIMEOUT: import.meta.env.VITE_API_TIMEOUT || 30000,
